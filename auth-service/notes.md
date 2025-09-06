@@ -1,0 +1,4 @@
+- refresh хранить в HttpOnly cookie
+- access только в памяти часто в Redux, Vuex, zustand, просто в переменной, он не кладётся в localStorage или sessionStorage, чтобы снизить риск XSS
+- при каждом запросе API → прикладывает access-токен в заголовок, если сервер отвечает 401 Unauthorized (просрочен access), клиент автоматически идёт на эндпоинт /refresh
+- при logout — чистим refresh на сервере и клиенте

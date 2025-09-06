@@ -1,0 +1,38 @@
+syntax = "proto3";
+
+option go_package = "./proto";
+
+package auth;
+
+service AuthService {
+    rpc Register(RegisterRequest) returns (EmptyMessage);
+    rpc SignIn(SignInRequest) returns (SignInResponse);
+    rpc Refresh(RefreshJWT) returns (AccessJWT);
+    rpc AuthCheck(AccessJWT) returns (EmptyMessage);
+    rpc SignOut(RefreshJWT) returns (EmptyMessage);
+}
+
+message RegisterRequest {
+    string login = 1;
+    string password = 2;
+}
+
+message SignInRequest {
+    string login = 1;
+    string password = 2;
+}
+
+message SignInResponse {
+    string accessJWT = 1;
+    string refreshJWT = 2;
+}
+
+message AccessJWT {
+    string accessJWT = 1;
+}
+
+message RefreshJWT {
+    string refreshJWT = 1;
+}
+
+message EmptyMessage {}
