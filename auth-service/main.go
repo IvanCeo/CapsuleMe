@@ -77,7 +77,8 @@ func (s *server) SignIn(ctx context.Context, req *pb.SignInRequest) (*pb.SignInR
 		jwt.SigningMethodES256,
 		jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(15 * time.Minute)),
-			Subject: userId.String()
+			Subject: userId.String(),
+			ID: "access"
 		}
 	)
 	accessToken, err = accessT.SignedString(s.key)
@@ -89,7 +90,8 @@ func (s *server) SignIn(ctx context.Context, req *pb.SignInRequest) (*pb.SignInR
 		jwt.SigningMethodES256,
 		jwt.RegisteredClaims(
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)),
-			Subject: userId.String()
+			Subject: userId.String(),
+			ID: "refresh"
 		)
 	)
 	refreshToken, err = refreshT.SignedString(s.key)
@@ -106,7 +108,43 @@ func (s *server) Refresh(ctx context.Context, req *pb.RefreshJWT) (*pb.AccessJWT
 		if _, ok := token.Method(*jwt.SigningMethodECDSA); !ok {
 			return nil, Errorf("Ошибка подписи ключа: %v", token.Header["alg"])
 		}
+		return &s.key.PublicKey, nil
 	})
+	
+	switch {
+	case token.Valid:
+		if ID := token.Claims.ID; ID != "refresh" {
+			return nil, fmt.Errorf("Подмена токена: %v", jwt.ErrTokenInvalidId)
+		}
+		userId, err := token.Claims.GetSubject()
+		if err != nil {
+			return nil, Errorf("Ошибка поля пользователя: %v", err)
+		}
+		var (
+			accessT *jwt.Token
+			accessToken string
+		)
+		accessT = jwt.NewWithClaims(
+			jwt.SigningMethodES256,
+			jwt.RegisteredClaims{
+				ExpiresAt: jwt.NewNumericDate(time.Now().Add(15 * time.Minute)),
+				Subject: userId.String()
+			}
+		)
+		accessToken, err = accessT.SignedString(s.key)
+		if err != nil {
+			return nil, fmt.Errorf("Ошибка подписания access после refresh: %v", err)
+		}
+		return &pb.AccessJWT{AccessJWT: accessToken}
+	case errors.Is(err, jwt.ErrTokenMalformed):
+		return nil, fmt.Errorf("Токен искажен: %v", err)
+	case errors.Is(err, jwt.ErrTokenSignatureInvalid):
+		return nil, fmt.Errorf("Ошибка подписи токена: %v", err)
+	case errors.Is(err, jwt.ErrTokenExpired) || errors.Is(err, jwt.ErrTokenNotValidYet):
+		return nil, fmt.Errorf("Токен просрочен: %v", err)
+	default:
+		return nil, fmt.Errorf("Ошибка обработки токена: %v", err)
+	}
 }
 
 func main() {
