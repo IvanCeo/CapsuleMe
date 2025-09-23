@@ -34,7 +34,6 @@ var (
     ErrInvalidCreds   = errors.New("неверный логин или пароль")
 )
 
-
 type server struct {
 	pb.UnimplementedAuthServiceServer
 	db *pgxpool.Pool
