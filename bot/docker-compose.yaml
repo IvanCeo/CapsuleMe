@@ -1,0 +1,28 @@
+services:
+  app:
+    build: .
+    container_name: bot
+    depends_on:
+      - postgres
+    environment:
+      - POSTGRES_USER=bot
+      - POSTGRES_PASSWORD=bot_pass
+      - POSTGRES_DB=bot_db
+      - BOT_TOKEN=
+    networks:
+      - internal
+    restart: always
+
+  postgres:
+    image: postgres
+    environment:
+      - POSTGRES_USER=bot
+      - POSTGRES_PASSWORD=bot_pass
+      - POSTGRES_DB=bot_db
+    networks:
+      - internal
+    restart: always
+
+networks:
+  internal:
+    driver: bridge
