@@ -2,7 +2,9 @@ package handlers
 
 import (
 	"context"
+
 	"bot/internal/storage"
+	internalModels "bot/internal/models"
 
 	"github.com/go-telegram/bot"
 	"github.com/go-telegram/bot/models"
@@ -11,10 +13,9 @@ import (
 func handleStartMessage(ctx context.Context, b *bot.Bot, update *models.Update, db *storage.Database) {
 	userID := update.Message.From.ID
 
-	// получаем пользователя из БД или создаём нового
 	user, _ := db.GetUser(ctx, userID)
 	if user == nil {
-		db.CreateUser(ctx, &storage.User{
+		db.CreateUser(ctx, &internalModels.User{
 			ID:    userID,
 			State: "new",
 		})
@@ -25,7 +26,7 @@ func handleStartMessage(ctx context.Context, b *bot.Bot, update *models.Update, 
 		Text:   "Привет! Жми кнопку, чтобы начать",
 		ReplyMarkup: &models.InlineKeyboardMarkup{
 			InlineKeyboard: [][]models.InlineKeyboardButton{
-				{{Text: "Начать", CallbackData: "start"}},
+				{{Text: "Пройти опрос", CallbackData: "qstart"}},
 			},
 		},
 	})

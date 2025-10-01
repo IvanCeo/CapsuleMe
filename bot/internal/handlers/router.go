@@ -8,6 +8,15 @@ import (
 	"github.com/go-telegram/bot/models"
 )
 
+var prefixMap = map[string]func(ctx context.Context, b *bot.Bot, update *models.Update, db *storage.Database){
+    "m": handleMenu,
+    "q": handleSurvey,
+}
+
+func selectPrefix(s string) (string) {
+	return string([]rune(s)[0])
+}
+
 func Router(db *storage.Database) bot.HandlerFunc {
 	return func(ctx context.Context, b *bot.Bot, update *models.Update) {
 		if update.Message != nil {
@@ -15,7 +24,10 @@ func Router(db *storage.Database) bot.HandlerFunc {
 		}
 
 		if update.CallbackQuery != nil {
-			handleCallback(ctx, b, update, db)
+			prefix := selectPrefix(update.CallbackQuery.Data)
+			if handler, ok := prefixMap[prefix]; ok {
+				handler(ctx, b, update, db)
+			}
 		}
 	}
 }
