@@ -1,0 +1,35 @@
+survey_id: basic-style-survey
+version: "1.0"
+rules:
+  - question_id: gender
+    target: Gender
+    required: true
+    value_map:
+      male: male
+      female: female
+
+  - question_id: style
+    target: Style
+    required: true
+    value_map:
+      classic: classic
+      casual: casual
+      sport: sport
+
+  - question_id: season
+    target: Season
+    default: all-seasons
+    value_map:
+      winter: winter
+      summer: summer
+      autumn: autumn
+      spring: spring
+  
+  - question_id: color
+    target: Color
+    default: none
+    value_map:
+      dark: dark
+      light: light
+      bright: bright
+      none: none

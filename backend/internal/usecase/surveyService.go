@@ -1,0 +1,148 @@
+package usecase
+
+import (
+	"capsule-me/internal/domain/catalog"
+	"capsule-me/internal/domain/survey"
+	"fmt"
+	"log/slog"
+	"os"
+	"path/filepath"
+)
+
+// оркестрирует работу доменных сервисов
+type SurveyService struct {
+	engine  *survey.SurveyEngine
+	def     *survey.SurveyDefinition
+	mapper  *survey.FeatureMapper
+	session SessionRepo
+	log     *slog.Logger
+}
+
+type SessionRepo interface {
+	Save(*survey.SurveySession) error
+	GetByUser(userID int64) (*survey.SurveySession, error)
+	DeleteByUser(userID int64)
+}
+
+func NewSurveyService(repo SessionRepo, log *slog.Logger) (*SurveyService, error) {
+	log.Info("NewSurveyService")
+	root, _ := os.Getwd()
+	def, err := survey.LoadSurveyDefinitionYAML(filepath.Join(root, "configs", "surveyDefinition.yaml"))
+	if err != nil {
+		wd, _ := os.Getwd()
+		fmt.Println("working dir:", wd)
+		return nil, err
+	}
+
+	cfg, err := survey.LoadMappingConfigYAML(filepath.Join(root, "configs", "featureMapping.yaml"))
+	if err != nil {
+		return nil, err
+	}
+
+	return &SurveyService{
+		engine:  &survey.SurveyEngine{},
+		def:     def,
+		mapper:  &survey.FeatureMapper{Config: cfg},
+		session: repo,
+		log:     log,
+	}, nil
+}
+
+func (ser *SurveyService) StartSurvey(userID int64) (*survey.Question, error) {
+	ser.log.Info("StartSurvey", "userID", userID)
+
+	session, err := ser.engine.StartSession(ser.def, userID)
+	if err != nil {
+		ser.log.Error(
+			"failed to start session",
+			"userID", userID,
+			"err", err,
+		)
+		return nil, err
+	}
+
+	ser.log.Debug(
+		"created session",
+		"userID", userID,
+		"sessionID", session.ID.String(),
+	)
+
+	err = ser.session.Save(session)
+	if err != nil {
+		ser.log.Error(
+			"failed to save session",
+			"userID", userID,
+			"err", err,
+		)
+		return nil, err
+	}
+	q, err := ser.engine.GetCurrentQuestion(ser.def, session)
+	if err != nil {
+		ser.log.Error(
+			"failed to get current question",
+			"userID", userID,
+			"err", err,
+		)
+		return nil, err
+	}
+
+	return q, nil
+}
+
+func (ser *SurveyService) GetSessionByUser(userID int64) (*survey.SurveySession, error) {
+	s, err := ser.session.GetByUser(userID)
+	if err != nil {
+		return nil, err
+	}
+	return s, nil
+}
+
+func (ser *SurveyService) IsDone(userID int64) (bool, error) {
+	s, err := ser.session.GetByUser(userID)
+	if err != nil {
+		return true, err
+	}
+	return ser.engine.IsDone(s), nil
+}
+
+func (ser *SurveyService) AnswerQuestion(userID int64, answerValue string) error {
+	ser.log.Info("AnswerQuestion")
+	session, err := ser.GetSessionByUser(userID)
+	if err != nil {
+		return err
+	}
+
+	return ser.engine.AnswerQuestion(ser.def, session, answerValue)
+}
+
+func (ser *SurveyService) GetCurrentQuestion(userID int64) (*survey.Question, error) {
+	session, err := ser.GetSessionByUser(userID)
+	if err != nil {
+		return nil, err
+	}
+	ser.log.Debug(
+		"GetCurrentQuestion",
+		"question in session",
+		session.CurrentQuestionID,
+	)
+	q, err := ser.engine.GetCurrentQuestion(ser.def, session)
+	if err != nil {
+		return nil, err
+	}
+
+	ser.log.Debug(
+		"GetCurrentQuestion",
+		"question from engine",
+		q.Text,
+	)
+
+	return q, nil
+}
+
+func (ser *SurveyService) MapIncomingFeature(session *survey.SurveySession) (*catalog.IncomingFeature, error) {
+	f, err := ser.mapper.MapAnswers(session)
+	if err != nil {
+		return nil, err
+	}
+	return &f, nil
+}

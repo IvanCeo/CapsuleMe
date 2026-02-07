@@ -1,0 +1,45 @@
+id: basic-style-survey
+version: "1.0"
+title: Подбор стиля одежды
+questions:
+  - id: gender
+    text: "Ваш пол?"
+    options:
+      - value: male
+        label: "Мужской"
+      - value: female
+        label: "Женский"
+
+  - id: style
+    text: "Какой стиль предпочитаете?"
+    options:
+      - value: classic
+        label: "Классический"
+      - value: casual
+        label: "Повседневный"
+      - value: sport
+        label: "Спортивный"
+
+  - id: season
+    text: "Сезон?"
+    options:
+      - value: winter
+        label: "Зима"
+      - value: summer
+        label: "Лето"
+      - value: autumn
+        label: "Осень"
+      - value: spring
+        label: "Весна"
+  
+  - id: color
+    text: "Предпочтения по цветам?"
+    options:
+      - value: dark
+        label: "🎨 Тёмная"
+      - value: light
+        label: "🎨 Светлая"
+      - value: bright
+        label: "🎨 Яркая"
+      - value: none
+        label: "🌈 Без ограничений"
