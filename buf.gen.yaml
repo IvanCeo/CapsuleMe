@@ -1,0 +1,19 @@
+version: v2
+clean: true
+plugins:
+  - local: protoc-gen-go
+    out: services/app/internal/gen
+    opt:
+      - paths=source_relative
+  - local: protoc-gen-go-grpc
+    out: services/app/internal/gen
+    opt:
+      - paths=source_relative
+  # - remote: buf.build/protocolbuffers/python
+  #   out: services/capsule-gen/grpc_gen
+  # - remote: buf.build/grpc/python
+  #   out: services/capsule-gen/grpc_gen
+  # - remote: buf.build/protocolbuffers/python
+  #   out: services/look-gen/grpc_gen
+  # - remote: buf.build/grpc/python
+  #   out: services/look-gen/grpc_gen

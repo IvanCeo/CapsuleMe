@@ -1,0 +1,42 @@
+syntax = "proto3";
+
+package capsulegen;
+
+import  "common/common.proto";
+
+option go_package = "app/internal/gen/capsulegen";
+
+service CapsuleGenService {
+    rpc CapsuleGenerate(CapsuleGenerateRequest) returns (stream CapsuleGenerateResponse);
+}
+
+message CapsuleGenerateRequest {
+    common.Gender gender = 1;
+    common.Style style = 2;
+    common.Season season = 3;
+    optional common.Palette palette = 4;
+}
+
+message CapsuleGenerateResponse {
+    oneof payload {
+        Capsule capsule = 1;
+        bytes image_chunk = 2;
+    }
+}
+
+message Capsule {
+    repeated Item item = 1;
+}
+
+message Item {
+    string id = 1;
+    common.Gender gender = 2;
+    string category_group = 3;
+    string category = 4;
+    common.Style style = 5;
+    string color = 6;
+    common.Season season = 7;
+    string material = 8;
+    string description = 9;
+    string ext = 10;
+}
