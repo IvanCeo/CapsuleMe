@@ -24,7 +24,7 @@ var File_app_service_proto protoreflect.FileDescriptor
 
 const file_app_service_proto_rawDesc = "" +
 	"\n" +
-	"\x11app/service.proto\x12\x03appB\x16Z\x14app/internal/gen/appb\x06proto3"
+	"\x11app/service.proto\x12\x03appB\x1dZ\x1bcapsule-me/internal/gen/appb\x06proto3"
 
 var file_app_service_proto_goTypes = []any{}
 var file_app_service_proto_depIdxs = []int32{

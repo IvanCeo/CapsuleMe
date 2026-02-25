@@ -24,7 +24,7 @@ var File_look_gen_service_proto protoreflect.FileDescriptor
 
 const file_look_gen_service_proto_rawDesc = "" +
 	"\n" +
-	"\x16look-gen/service.proto\x12\alookgenB\x1aZ\x18app/internal/gen/lookgenb\x06proto3"
+	"\x16look-gen/service.proto\x12\alookgenB!Z\x1fcapsule-me/internal/gen/lookgenb\x06proto3"
 
 var file_look_gen_service_proto_goTypes = []any{}
 var file_look_gen_service_proto_depIdxs = []int32{

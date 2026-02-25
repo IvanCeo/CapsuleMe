@@ -253,7 +253,7 @@ const file_common_common_proto_rawDesc = "" +
 	"\x13PALETTE_UNSPECIFIED\x10\x00\x12\x10\n" +
 	"\fPALETTE_DARK\x10\x01\x12\x11\n" +
 	"\rPALETTE_LIGHT\x10\x02\x12\x12\n" +
-	"\x0ePALETTE_BRIGHT\x10\x03B\x19Z\x17app/internal/gen/commonb\x06proto3"
+	"\x0ePALETTE_BRIGHT\x10\x03B Z\x1ecapsule-me/internal/gen/commonb\x06proto3"
 
 var (
 	file_common_common_proto_rawDescOnce sync.Once

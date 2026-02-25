@@ -8,12 +8,11 @@ package capsulegen
 
 import (
 	common "capsule-me/internal/gen/common"
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
-
-	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
-	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 )
 
 const (
@@ -366,7 +365,7 @@ const file_capsule_gen_service_proto_rawDesc = "" +
 	"\x03ext\x18\n" +
 	" \x01(\tR\x03ext2q\n" +
 	"\x11CapsuleGenService\x12\\\n" +
-	"\x0fCapsuleGenerate\x12\".capsulegen.CapsuleGenerateRequest\x1a#.capsulegen.CapsuleGenerateResponse0\x01B\x1dZ\x1bapp/internal/gen/capsulegenb\x06proto3"
+	"\x0fCapsuleGenerate\x12\".capsulegen.CapsuleGenerateRequest\x1a#.capsulegen.CapsuleGenerateResponse0\x01B$Z\"capsule-me/internal/gen/capsulegenb\x06proto3"
 
 var (
 	file_capsule_gen_service_proto_rawDescOnce sync.Once

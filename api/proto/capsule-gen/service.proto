@@ -4,7 +4,7 @@ package capsulegen;
 
 import  "common/common.proto";
 
-option go_package = "app/internal/gen/capsulegen";
+option go_package = "capsule-me/internal/gen/capsulegen";
 
 service CapsuleGenService {
     rpc CapsuleGenerate(CapsuleGenerateRequest) returns (stream CapsuleGenerateResponse);

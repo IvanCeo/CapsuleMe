@@ -7,6 +7,7 @@ proto-lint:
 
 .PHONY: proto-go
 proto-go:
+	rmdir /s /q services\app\internal\gen
 	buf generate
 
 # проверка на излом совместимости
@@ -24,3 +25,11 @@ proto-python:
 		--python_out=services/look-gen/grpc_gen \
 		--grpc_python_out=services/look-gen/grpc_gen \
 		api/proto/look-gen/*.proto api/proto/common/*.proto
+
+.PHONY: ex
+ex:
+	type nul > temp.txt
+
+.PHONY: de
+de:
+	rmdir /s /q services\app\internal\gen

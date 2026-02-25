@@ -2,4 +2,4 @@ syntax = "proto3";
 
 package app;
 
-option go_package = "app/internal/gen/app";
+option go_package = "capsule-me/internal/gen/app";

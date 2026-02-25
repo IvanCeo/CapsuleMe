@@ -9,11 +9,3 @@ plugins:
     out: services/app/internal/gen
     opt:
       - paths=source_relative
-  # - remote: buf.build/protocolbuffers/python
-  #   out: services/capsule-gen/grpc_gen
-  # - remote: buf.build/grpc/python
-  #   out: services/capsule-gen/grpc_gen
-  # - remote: buf.build/protocolbuffers/python
-  #   out: services/look-gen/grpc_gen
-  # - remote: buf.build/grpc/python
-  #   out: services/look-gen/grpc_gen
