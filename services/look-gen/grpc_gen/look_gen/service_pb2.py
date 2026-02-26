@@ -24,12 +24,12 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x16look-gen/service.proto\x12\x07lookgenB\x1aZ\x18\x61pp/internal/gen/lookgenb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x16look-gen/service.proto\x12\x07lookgenB!Z\x1f\x63\x61psule-me/internal/gen/lookgenb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'look_gen.service_pb2', _globals)
 if not _descriptor._USE_C_DESCRIPTORS:
   _globals['DESCRIPTOR']._loaded_options = None
-  _globals['DESCRIPTOR']._serialized_options = b'Z\030app/internal/gen/lookgen'
+  _globals['DESCRIPTOR']._serialized_options = b'Z\037capsule-me/internal/gen/lookgen'
 # @@protoc_insertion_point(module_scope)

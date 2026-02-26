@@ -24,14 +24,14 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x13\x63ommon/common.proto\x12\x06\x63ommon*D\n\x06Gender\x12\x16\n\x12GENDER_UNSPECIFIED\x10\x00\x12\x0f\n\x0bGENDER_MALE\x10\x01\x12\x11\n\rGENDER_FEMALE\x10\x02*T\n\x05Style\x12\x15\n\x11STYLE_UNSPECIFIED\x10\x00\x12\x10\n\x0cSTYLE_CASUAL\x10\x01\x12\x11\n\rSTYLE_CLASSIC\x10\x02\x12\x0f\n\x0bSTYLE_SPORT\x10\x03*l\n\x06Season\x12\x16\n\x12SEASON_UNSPECIFIED\x10\x00\x12\x11\n\rSEASON_WINTER\x10\x01\x12\x11\n\rSEASON_AUTUMN\x10\x02\x12\x11\n\rSEASON_SPRING\x10\x03\x12\x11\n\rSEASON_SUMMER\x10\x04*[\n\x07Palette\x12\x17\n\x13PALETTE_UNSPECIFIED\x10\x00\x12\x10\n\x0cPALETTE_DARK\x10\x01\x12\x11\n\rPALETTE_LIGHT\x10\x02\x12\x12\n\x0ePALETTE_BRIGHT\x10\x03\x42\x19Z\x17\x61pp/internal/gen/commonb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x13\x63ommon/common.proto\x12\x06\x63ommon*D\n\x06Gender\x12\x16\n\x12GENDER_UNSPECIFIED\x10\x00\x12\x0f\n\x0bGENDER_MALE\x10\x01\x12\x11\n\rGENDER_FEMALE\x10\x02*T\n\x05Style\x12\x15\n\x11STYLE_UNSPECIFIED\x10\x00\x12\x10\n\x0cSTYLE_CASUAL\x10\x01\x12\x11\n\rSTYLE_CLASSIC\x10\x02\x12\x0f\n\x0bSTYLE_SPORT\x10\x03*l\n\x06Season\x12\x16\n\x12SEASON_UNSPECIFIED\x10\x00\x12\x11\n\rSEASON_WINTER\x10\x01\x12\x11\n\rSEASON_AUTUMN\x10\x02\x12\x11\n\rSEASON_SPRING\x10\x03\x12\x11\n\rSEASON_SUMMER\x10\x04*[\n\x07Palette\x12\x17\n\x13PALETTE_UNSPECIFIED\x10\x00\x12\x10\n\x0cPALETTE_DARK\x10\x01\x12\x11\n\rPALETTE_LIGHT\x10\x02\x12\x12\n\x0ePALETTE_BRIGHT\x10\x03\x42 Z\x1e\x63\x61psule-me/internal/gen/commonb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'common.common_pb2', _globals)
 if not _descriptor._USE_C_DESCRIPTORS:
   _globals['DESCRIPTOR']._loaded_options = None
-  _globals['DESCRIPTOR']._serialized_options = b'Z\027app/internal/gen/common'
+  _globals['DESCRIPTOR']._serialized_options = b'Z\036capsule-me/internal/gen/common'
   _globals['_GENDER']._serialized_start=31
   _globals['_GENDER']._serialized_end=99
   _globals['_STYLE']._serialized_start=101
