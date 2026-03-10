@@ -18,6 +18,10 @@ type Bot struct {
 	Log     *slog.Logger
 }
 
+// type ImageRepository interface {
+// 	Recommend(ctx context.Context, f *IncomingFeature, chatID int64) error
+// } этот интерфейс должна исполнять иньекция в catalogservice
+
 func NewBot() (*Bot, error) {
 	bot, err := bot.NewBotAPI(os.Getenv("TG_TOKEN"))
 	if err != nil {

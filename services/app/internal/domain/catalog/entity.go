@@ -38,23 +38,22 @@ func (itm *ImageItem) Validate() error {
 }
 
 type IncomingFeature struct {
-	Gender   string `json:"gender"`
-	Category string `json:"category"`
-	Style    string `json:"style"`
-	Color    string `json:"color"`
-	Season   string `json:"season"`
-	Material string `json:"material"`
+	Gender   string
+	Category string
+	Style    string
+	Color    string
+	Season   string
+	Material string
+}
+
+type Capsule struct {
+	Image []byte // может тут придется поменять, я хз как картинки хранятся
+	Items []ImageItem
+}
+type Recommendations struct {
+	Outfits []Outfit
 }
 
 type Outfit struct {
-	Items []ImageItem `json:"items"`
+	Items []ImageItem
 }
-
-type Recommendations struct {
-	Outfits []Outfit `json:"outfits"`
-}
-
-// нахуй этот метод нужен???
-// func (r *RecommendationResult) AddImageItem(itm *ImageItem) {
-// 	r.Items = append(r.Items, *itm)
-// }
