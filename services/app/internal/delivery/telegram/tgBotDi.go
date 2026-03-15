@@ -1,7 +1,7 @@
 package telegram
 
 import (
-	adapter "capsule-me/internal/adapter/catalogML"
+	"capsule-me/internal/delivery/grpc"
 	"capsule-me/internal/domain/catalog"
 	"capsule-me/internal/logger"
 	"capsule-me/internal/usecase"
@@ -29,7 +29,11 @@ func NewBot() (*Bot, error) {
 	}
 	log := logger.New()
 
-	catalogClient := adapter.NewCatalogClient(os.Getenv("OUTFIT_SERVICE_URL"))
+	// url для grpc сервиса
+	catalogClient, err := grpc.NewGrpcCatalogClient(5, "djsk", log)
+	if err != nil {
+		return nil, err
+	}
 	sessionRepo := mocks.NewSessionRepoMock()
 	surveyService, err := usecase.NewSurveyService(sessionRepo, log)
 	catalogService := catalog.NewRecommender(catalogClient)

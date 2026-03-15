@@ -263,7 +263,8 @@ func (h *JobHandler) handleAnswer(ctx context.Context, job Job) {
 		return
 	}
 
-	err = h.catalogService.Recommend(ctx, feature, job.ChatID)
+	res, err = h.catalogService.Recommend(ctx, feature)
+	// вот тут должен вернуть результат
 
 }
 
