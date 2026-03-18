@@ -83,7 +83,7 @@ func (cc *GrpcCatalogClient) Start() {
 		go func() {
 			defer cc.wg.Done()
 			for j := range cc.jobs {
-				res, err := cc.recommend(j.ctx, j.req)
+				res, err := cc.Srecommend(j.ctx, j.req)
 				j.result <- result{id: j.id, resp: res, err: err}
 			}
 		}()
@@ -213,7 +213,7 @@ func (cc *GrpcCatalogClient) submit(job job) bool {
 	}
 }
 
-func (cc *GrpcCatalogClient) recommend(ctx context.Context, f *catalog.IncomingFeature) (*catalog.Capsule, error) {
+func (cc *GrpcCatalogClient) Srecommend(ctx context.Context, f *catalog.IncomingFeature) (*catalog.Capsule, error) {
 	dto, err := toDTO(f)
 	if err != nil {
 		cc.log.Error("to dto err", "err", err)

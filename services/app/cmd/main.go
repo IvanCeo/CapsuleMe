@@ -31,7 +31,7 @@ func newCargo(c *grpc.GrpcCatalogClient, l *slog.Logger) *cargo {
 }
 
 func (c *cargo) cargoHandler(w http.ResponseWriter, r *http.Request) {
-	if _, err := c.catalog.Recommend(context.Background(), &catalog.IncomingFeature{}); err != nil {
+	if _, err := c.catalog.Srecommend(context.Background(), &catalog.IncomingFeature{}); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		c.logger.Error("maintest err", "err", err)
 		return
@@ -132,7 +132,6 @@ func main() {
 	<-ctx.Done()
 	log2.Info("gracefull shutdown...")
 
-	// Graceful shutdown HTTP сервера
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	if err := srv.Shutdown(shutdownCtx); err != nil {
