@@ -25,7 +25,6 @@ type SessionRepo interface {
 }
 
 func NewSurveyService(repo SessionRepo, log *slog.Logger) (*SurveyService, error) {
-	log.Info("NewSurveyService")
 	root, _ := os.Getwd()
 	def, err := survey.LoadSurveyDefinitionYAML(filepath.Join(root, "configs", "surveyDefinition.yaml"))
 	if err != nil {
@@ -49,7 +48,6 @@ func NewSurveyService(repo SessionRepo, log *slog.Logger) (*SurveyService, error
 }
 
 func (ser *SurveyService) StartSurvey(userID int64) (*survey.Question, error) {
-	ser.log.Info("StartSurvey", "userID", userID)
 
 	session, err := ser.engine.StartSession(ser.def, userID)
 	if err != nil {
@@ -60,12 +58,6 @@ func (ser *SurveyService) StartSurvey(userID int64) (*survey.Question, error) {
 		)
 		return nil, err
 	}
-
-	ser.log.Debug(
-		"created session",
-		"userID", userID,
-		"sessionID", session.ID.String(),
-	)
 
 	err = ser.session.Save(session)
 	if err != nil {
@@ -106,7 +98,6 @@ func (ser *SurveyService) IsDone(userID int64) (bool, error) {
 }
 
 func (ser *SurveyService) AnswerQuestion(userID int64, answerValue string) error {
-	ser.log.Info("AnswerQuestion")
 	session, err := ser.GetSessionByUser(userID)
 	if err != nil {
 		return err
@@ -120,21 +111,11 @@ func (ser *SurveyService) GetCurrentQuestion(userID int64) (*survey.Question, er
 	if err != nil {
 		return nil, err
 	}
-	ser.log.Debug(
-		"GetCurrentQuestion",
-		"question in session",
-		session.CurrentQuestionID,
-	)
+
 	q, err := ser.engine.GetCurrentQuestion(ser.def, session)
 	if err != nil {
 		return nil, err
 	}
-
-	ser.log.Debug(
-		"GetCurrentQuestion",
-		"question from engine",
-		q.Text,
-	)
 
 	return q, nil
 }

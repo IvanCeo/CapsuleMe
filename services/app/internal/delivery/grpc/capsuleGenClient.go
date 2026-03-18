@@ -14,6 +14,7 @@ import (
 
 	"github.com/google/uuid"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 // это то, откуда воркеры берут работу, id надо для индентификации запроса, инкремент
@@ -30,7 +31,7 @@ type result struct {
 	err  error
 }
 
-type grpcCatalogClient struct {
+type GrpcCatalogClient struct {
 	mu        *sync.RWMutex
 	wg        *sync.WaitGroup
 	stopped   atomic.Bool
@@ -49,9 +50,8 @@ func inc() func() int32 {
 	}
 }
 
-// доделать
-func NewGrpcCatalogClient(maxWorkers int, baseURL string, logger *slog.Logger) (*grpcCatalogClient, error) {
-	conn, err := grpc.NewClient(baseURL) // DialOptions сделать потом, они идут как второй аргумент ...DialOptions
+func NewGrpcCatalogClient(maxWorkers int, baseURL string, logger *slog.Logger) (*GrpcCatalogClient, error) {
+	conn, err := grpc.NewClient(baseURL, grpc.WithTransportCredentials(insecure.NewCredentials())) // DialOptions сделать потом, они идут как второй аргумент ...DialOptions
 	if err != nil {
 		return nil, err
 	}
@@ -65,7 +65,7 @@ func NewGrpcCatalogClient(maxWorkers int, baseURL string, logger *slog.Logger) (
 	mu := &sync.RWMutex{}
 	increment := inc()
 
-	return &grpcCatalogClient{
+	return &GrpcCatalogClient{
 		mu:        mu,
 		wg:        wg,
 		client:    client,
@@ -77,7 +77,7 @@ func NewGrpcCatalogClient(maxWorkers int, baseURL string, logger *slog.Logger) (
 }
 
 // заводит воркеров
-func (cc *grpcCatalogClient) Start() {
+func (cc *GrpcCatalogClient) Start() {
 	for i := 0; i < cc.workers; i++ {
 		cc.wg.Add(1)
 		go func() {
@@ -88,16 +88,28 @@ func (cc *grpcCatalogClient) Start() {
 			}
 		}()
 	}
+	cc.log.Info("grpc pool started")
 }
 
-func (cc *grpcCatalogClient) Stop() {
+func (cc *GrpcCatalogClient) Stop() {
 	cc.mu.Lock()
 	defer cc.mu.Unlock()
 	cc.stopped.Store(true)
 	close(cc.jobs)
 	cc.log.Info("каналы закрыты")
-	cc.wg.Wait()
-	cc.log.Info("воркеры остановлены")
+
+	done := make(chan struct{})
+	go func() {
+		cc.wg.Wait()
+		close(done)
+	}()
+
+	select {
+	case <-done:
+		cc.log.Info("воркеры остановлены")
+	case <-time.After(5 * time.Second):
+		cc.log.Error("таймаут ожидания воркеров")
+	}
 }
 
 func toDTO(in *catalog.IncomingFeature) (*capsulegen.CapsuleGenerateRequest, error) {
@@ -187,7 +199,7 @@ func fromDTO(out *capsulegen.Capsule) (*catalog.Capsule, error) {
 	return nil, errors.New("grpc fromDTO: out is nil")
 }
 
-func (cc *grpcCatalogClient) submit(job job) bool {
+func (cc *GrpcCatalogClient) submit(job job) bool {
 	cc.mu.Lock()
 	defer cc.mu.Unlock()
 	if cc.stopped.Load() {
@@ -201,14 +213,16 @@ func (cc *grpcCatalogClient) submit(job job) bool {
 	}
 }
 
-func (cc *grpcCatalogClient) recommend(ctx context.Context, f *catalog.IncomingFeature) (*catalog.Capsule, error) {
+func (cc *GrpcCatalogClient) recommend(ctx context.Context, f *catalog.IncomingFeature) (*catalog.Capsule, error) {
 	dto, err := toDTO(f)
 	if err != nil {
+		cc.log.Error("to dto err", "err", err)
 		return nil, err
 	}
 
 	stream, err := cc.client.CapsuleGenerate(ctx, dto)
 	if err != nil {
+		cc.log.Error("stream err", "err", err)
 		return nil, err
 	}
 
@@ -221,17 +235,16 @@ func (cc *grpcCatalogClient) recommend(ctx context.Context, f *catalog.IncomingF
 			break
 		}
 		if err != nil {
+			cc.log.Error("stream Recv err", "err", err)
 			return nil, err
 		}
 
 		switch v := resp.Payload.(type) {
 		case *capsulegen.CapsuleGenerateResponse_Capsule:
 			capsule = v.Capsule
-			cc.log.Info("got capsule payload")
 
 		case *capsulegen.CapsuleGenerateResponse_ImageChunk:
 			imageData = append(imageData, v.ImageChunk...)
-			cc.log.Info("got iamge chunk payload")
 
 		default:
 			cc.log.Error("unknown payload")
@@ -239,35 +252,38 @@ func (cc *grpcCatalogClient) recommend(ctx context.Context, f *catalog.IncomingF
 	}
 
 	if capsule == nil || len(imageData) == 0 {
+		cc.log.Error("nil капсула или картинка")
 		return nil, errors.New("nil капсула или картинка")
 	}
 
 	res, err := fromDTO(capsule)
 	if err != nil {
+		cc.log.Error("from dto err")
 		return nil, err
 	}
 	res.Image = imageData
 	return res, nil
 }
 
-func (cc *grpcCatalogClient) Recommend(ctx context.Context, f *catalog.IncomingFeature) (*catalog.Capsule, error) {
+func (cc *GrpcCatalogClient) Recommend(ctx context.Context, f *catalog.IncomingFeature) (*catalog.Capsule, error) {
+	resChan := make(chan result, cc.workers)
+
 	job := job{
-		id:  cc.increment(),
-		req: f,
-		ctx: ctx,
+		id:     cc.increment(),
+		req:    f,
+		ctx:    ctx,
+		result: resChan,
 	}
 
 	if ok := cc.submit(job); !ok {
 		return nil, errors.New("job не положилась в канал")
 	}
-	resChan := make(chan result, cc.workers)
-	job.result = resChan
 
 	select {
 	case <-ctx.Done():
 		return nil, ctx.Err()
-	case <-time.After(5 * time.Second):
-		return nil, errors.New("capsule timeout")
+	// case <-time.After(5 * time.Second):
+	// return nil, errors.New("capsule timeout")
 	case res := <-job.result:
 		return res.resp, res.err
 	}

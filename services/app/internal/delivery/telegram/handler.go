@@ -35,7 +35,6 @@ func NewJobHandler(
 func (h *JobHandler) Handle(ctx context.Context, job Job) {
 	select {
 	case <-ctx.Done():
-		h.log.Info("shutdown: skipping job", "job id", job.JobID)
 		return
 	default:
 	}
@@ -49,15 +48,6 @@ func (h *JobHandler) Handle(ctx context.Context, job Job) {
 }
 
 func (h *JobHandler) handleStart(ctx context.Context, job Job) {
-	h.log.Info(
-		"job started",
-		"job id", job.JobID,
-		"job type", job.Type,
-		"chat id", job.ChatID,
-		"user id", job.UserID,
-		"update id", job.UpdateID,
-	)
-
 	question, err := h.surveyService.StartSurvey(job.UserID)
 	if err != nil {
 		h.log.Error(
@@ -99,11 +89,6 @@ func (h *JobHandler) handleStart(ctx context.Context, job Job) {
 		)
 		return
 	}
-
-	h.log.Info(
-		"job completed",
-		"job id", job.JobID,
-	)
 }
 
 func (h *JobHandler) handleAnswer(ctx context.Context, job Job) {
@@ -230,8 +215,6 @@ func (h *JobHandler) handleAnswer(ctx context.Context, job Job) {
 			)
 			return
 		}
-
-		h.log.Info("job completed", "job id", job.JobID)
 		return
 	}
 
@@ -263,9 +246,30 @@ func (h *JobHandler) handleAnswer(ctx context.Context, job Job) {
 		return
 	}
 
-	res, err = h.catalogService.Recommend(ctx, feature)
-	// вот тут должен вернуть результат
+	res, err := h.catalogService.Recommend(ctx, feature)
+	if err != nil {
+		h.log.Error(
+			"failed to Recommend",
+			"job id", job.JobID,
+			"chat id", job.ChatID,
+			"user id", job.UserID,
+			"update id", job.UpdateID,
+			"err", err,
+		)
+		_ = h.sendText(job, "Произошла ошибка. Нажми /start")
+		return
+	}
 
+	phCFG := bot.NewPhoto(job.ChatID, bot.FileBytes{Bytes: res.Image})
+	phCFG.Caption = "твоя капсула!\nХочешь еще? -> жми /start"
+	_, err = h.bot.Send(phCFG)
+	if err != nil {
+		h.log.Error("ошибка отправки фото", "err", err)
+		_ = h.sendText(job, "Произошла ошибка. Нажми /start")
+		return
+	} else {
+		h.log.Info("фото успешно отправлено")
+	}
 }
 
 func (h *JobHandler) sendText(job Job, text string) error {

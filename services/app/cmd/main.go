@@ -3,44 +3,41 @@ package main
 import (
 	"context"
 	"log"
+	"log/slog"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
+	"capsule-me/internal/delivery/grpc"
 	"capsule-me/internal/delivery/telegram"
+	"capsule-me/internal/domain/catalog"
+	"capsule-me/internal/logger"
 	"capsule-me/internal/runtime/workerpool"
 
 	bot "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/joho/godotenv"
 )
 
-func main() {
-	godotenv.Load()
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	defer stop()
+// имитация абстракции сервиса реккомендации
+type cargo struct {
+	catalog *grpc.GrpcCatalogClient
+	logger  *slog.Logger
+}
 
-	// db, err := postgres.NewPostgres(ctx)
-	// if err != nil {
-	// 	log.Fatalf("failed postgres:%v", err)
-	// }
-	// defer db.Close()
+func newCargo(c *grpc.GrpcCatalogClient, l *slog.Logger) *cargo {
+	return &cargo{catalog: c, logger: l}
+}
 
-	b, err := telegram.NewBot()
-	if err != nil {
-		log.Fatalf("failed to init bot: %v", err)
+func (c *cargo) cargoHandler(w http.ResponseWriter, r *http.Request) {
+	if _, err := c.catalog.Recommend(context.Background(), &catalog.IncomingFeature{}); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		c.logger.Error("maintest err", "err", err)
+		return
 	}
-
-	updates := b.Bot.GetUpdatesChan(telegram.NewUpdateConfig())
-
-	pool := workerpool.NewWorkerPool(
-		5,
-		100,
-		b.Log,
-	)
-	pool.Start(ctx, b.Handler.Handle)
-
-	router(ctx, b.Bot, updates, pool)
+	w.WriteHeader(http.StatusOK)
+	c.logger.Info("maintest success")
 }
 
 func router(
@@ -78,4 +75,70 @@ func router(
 			}
 		}
 	}
+}
+
+func main() {
+	log2 := logger.New()
+
+	godotenv.Load()
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	client, err := grpc.NewGrpcCatalogClient(5, "localhost:50052", log2)
+	if err != nil {
+		log.Fatalf("failed to create gRPC client: %v", err)
+	}
+
+	client.Start()
+	defer client.Stop()
+
+	b, err := telegram.NewBot(client)
+	if err != nil {
+		log.Fatalf("failed to init bot: %v", err)
+	}
+
+	updates := b.Bot.GetUpdatesChan(telegram.NewUpdateConfig())
+
+	pool := workerpool.NewWorkerPool(
+		5,
+		100,
+		b.Log,
+	)
+	pool.Start(ctx, b.Handler.Handle)
+
+	go router(ctx, b.Bot, updates, pool)
+
+	// для замеров
+	cargo := newCargo(client, log2)
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("/cargo", cargo.cargoHandler)
+
+	srv := &http.Server{
+		Addr:           ":5052",
+		Handler:        mux,
+		ReadTimeout:    5 * time.Second,
+		WriteTimeout:   5 * time.Second,
+		IdleTimeout:    30 * time.Second,
+		MaxHeaderBytes: 1 << 10,
+	}
+
+	go func() {
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log2.Error("HTTP server error", "err", err)
+		}
+	}()
+
+	<-ctx.Done()
+	log2.Info("gracefull shutdown...")
+
+	// Graceful shutdown HTTP сервера
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := srv.Shutdown(shutdownCtx); err != nil {
+		log2.Error("HTTP shutdown error", "err", err)
+	}
+
+	log2.Info("сервер остановлен")
+
 }

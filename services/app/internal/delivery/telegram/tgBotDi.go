@@ -7,7 +7,6 @@ import (
 	"capsule-me/internal/usecase"
 	"capsule-me/test/mocks"
 	"log/slog"
-	"os"
 
 	bot "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
@@ -18,32 +17,23 @@ type Bot struct {
 	Log     *slog.Logger
 }
 
-// type ImageRepository interface {
-// 	Recommend(ctx context.Context, f *IncomingFeature, chatID int64) error
-// } этот интерфейс должна исполнять иньекция в catalogservice
-
-func NewBot() (*Bot, error) {
-	bot, err := bot.NewBotAPI(os.Getenv("TG_TOKEN"))
+func NewBot(catalogClient *grpc.GrpcCatalogClient) (*Bot, error) {
+	tgBot, err := bot.NewBotAPI("8419250904:AAE8hbKcfH8SqY4LQP0blN-d5rRlrt39yC8")
 	if err != nil {
 		return nil, err
 	}
 	log := logger.New()
 
-	// url для grpc сервиса
-	catalogClient, err := grpc.NewGrpcCatalogClient(5, "djsk", log)
-	if err != nil {
-		return nil, err
-	}
 	sessionRepo := mocks.NewSessionRepoMock()
 	surveyService, err := usecase.NewSurveyService(sessionRepo, log)
-	catalogService := catalog.NewRecommender(catalogClient)
-
 	if err != nil {
 		return nil, err
 	}
-	handler := NewJobHandler(bot, surveyService, catalogService, log)
+	catalogService := catalog.NewRecommender(catalogClient)
+
+	handler := NewJobHandler(tgBot, surveyService, catalogService, log)
 	return &Bot{
-		Bot:     bot,
+		Bot:     tgBot,
 		Handler: handler,
 		Log:     log,
 	}, nil
