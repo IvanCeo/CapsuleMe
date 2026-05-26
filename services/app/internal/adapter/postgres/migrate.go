@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"time"
 
+	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/pressly/goose/v3"
 )
 
@@ -39,7 +40,7 @@ func (p *Postgres) Up(ctx context.Context, cfg Config) error {
 	}
 
 	goose.SetDialect("postgres")
-	if err := goose.DownContext(ctx, db, dirAbs); err != nil {
+	if err := goose.UpContext(ctx, db, dirAbs); err != nil {
 		return fmt.Errorf("goose down: %w", err)
 	}
 	return nil
@@ -87,13 +88,16 @@ func buildPostgresDSN(cfg Config) (string, error) {
 	u := &url.URL{
 		Scheme: "postgres",
 		User:   url.UserPassword(cfg.User, cfg.Password),
-		Host:   fmt.Sprintf("%s:%s", cfg.Host, cfg.Port),
+		Host:   fmt.Sprintf("%s:%d", cfg.Host, cfg.Port),
 		Path:   cfg.DBName,
 	}
+
 	q := url.Values{}
 	if cfg.SSLMode != "" {
 		q.Set("sslmode", cfg.SSLMode)
 	}
+
 	u.RawQuery = q.Encode()
+
 	return u.String(), nil
 }

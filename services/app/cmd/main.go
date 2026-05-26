@@ -80,7 +80,7 @@ func router(
 func main() {
 	log2 := logger.New()
 
-	godotenv.Load()
+	godotenv.Load("app.env")
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 

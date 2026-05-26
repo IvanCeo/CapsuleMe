@@ -1,21 +1,19 @@
 package catalog
 
-import (
-	"github.com/google/uuid"
-)
-
 type ImageItem struct {
-	ID            uuid.UUID `json:"id"`
-	ObjectID      uuid.UUID `json:"object_id"`
-	Gender        string    `json:"gender"`
-	CategoryGroup string    `json:"category_group"`
-	Category      string    `json:"category"`
-	Style         string    `json:"style"`
-	Color         string    `json:"color"`
-	Season        string    `json:"season"`
-	Material      string    `json:"material"`
-	Description   string    `json:"description"`
-	Ext           string    `json:"ext"`
+	// ID            uuid.UUID `json:"id"`
+	// ObjectID      uuid.UUID `json:"object_id"`
+	ID            string `json:"id"`
+	ObjectID      string `json:"object_id"`
+	Gender        string `json:"gender"`
+	CategoryGroup string `json:"category_group"`
+	Category      string `json:"category"`
+	Style         string `json:"style"`
+	Color         string `json:"color"`
+	Season        string `json:"season"`
+	Material      string `json:"material"`
+	Description   string `json:"description"`
+	Ext           string `json:"ext"`
 }
 
 func (itm *ImageItem) Validate() error {
@@ -47,7 +45,7 @@ type IncomingFeature struct {
 }
 
 type Capsule struct {
-	Image []byte // может тут придется поменять, я хз как картинки хранятся
+	Image []byte
 	Items []ImageItem
 }
 type Recommendations struct {

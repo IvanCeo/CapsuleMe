@@ -145,6 +145,12 @@ func (p *Postgres) GetItemByFeatures(ctx context.Context, in *catalog.IncomingFe
 	return items, nil
 }
 
+func (p *Postgres) SaveFeedback(ctx context.Context, key, value string) error {
+	q := fmt.Sprintf(`insert into feedback (score, capsule)	values ('%s', '%s');`, key, value)
+	_, err := p.pool.Exec(ctx, q)
+	return err
+}
+
 func getEnv(key, fallback string) string {
 	if value := os.Getenv(key); value != "" {
 		return value

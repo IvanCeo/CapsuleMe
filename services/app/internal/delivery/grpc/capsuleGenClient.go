@@ -12,7 +12,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/google/uuid"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
@@ -175,10 +174,11 @@ func fromDTO(out *capsulegen.Capsule) (*catalog.Capsule, error) {
 
 		for _, item := range out.Item {
 			i := &catalog.ImageItem{}
-			id, err := uuid.Parse(item.GetId())
-			if err != nil {
-				return nil, errors.New("invalid item ID")
-			}
+			// id, err := uuid.Parse(item.GetId())
+			// if err != nil {
+			// 	return nil, errors.New("invalid item ID")
+			// }
+			id := item.GetId()
 			i.ID = id
 			i.ObjectID = id
 			i.Gender = item.GetGender().String()

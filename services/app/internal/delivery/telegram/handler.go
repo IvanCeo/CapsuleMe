@@ -5,7 +5,9 @@ import (
 	"capsule-me/internal/domain/survey"
 	"capsule-me/internal/usecase"
 	"context"
+	"encoding/json"
 	"errors"
+	"fmt"
 	"log/slog"
 
 	bot "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -48,6 +50,8 @@ func (h *JobHandler) Handle(ctx context.Context, job Job) {
 }
 
 func (h *JobHandler) handleStart(ctx context.Context, job Job) {
+	_ = ctx
+
 	question, err := h.surveyService.StartSurvey(job.UserID)
 	if err != nil {
 		h.log.Error(
@@ -140,6 +144,25 @@ func (h *JobHandler) handleAnswer(ctx context.Context, job Job) {
 		h.log.Info("shutdown: stopping answer flow", "job id", job.JobID)
 		return
 	default:
+	}
+
+	// тут хендлить ответы обратной связи
+	if job.Data[:1] == "0" || job.Data[:1] == "1" {
+		go func(job Job) {
+			key := job.Data[2:]
+			cpsl, err := h.surveyService.GetFromCache(ctx, key) // достатется по jobID из редиса
+			if err != nil {
+				h.log.Error("failed to get from cache", "err", err, "key from job", key, "job", job)
+				return
+			}
+			score := job.Data[:1]
+			err = h.surveyService.SaveFeedback(ctx, score, cpsl)
+			if err != nil {
+				h.log.Error("failed to save feedback", "err", err)
+				return
+			}
+		}(job)
+		return
 	}
 
 	err := h.surveyService.AnswerQuestion(job.UserID, job.Data)
@@ -260,9 +283,38 @@ func (h *JobHandler) handleAnswer(ctx context.Context, job Job) {
 		return
 	}
 
+	// -------------
+
 	phCFG := bot.NewPhoto(job.ChatID, bot.FileBytes{Bytes: res.Image})
-	phCFG.Caption = "твоя капсула!\nХочешь еще? -> жми /start"
+	phCFG.Caption = "твоя капсула!"
 	_, err = h.bot.Send(phCFG)
+	keyboard := bot.InlineKeyboardMarkup{
+		InlineKeyboard: [][]bot.InlineKeyboardButton{
+			{
+				bot.NewInlineKeyboardButtonData("да!", fmt.Sprintf("1:%v", job.JobID)),
+				bot.NewInlineKeyboardButtonData("нет :(", fmt.Sprintf("0:%v", job.JobID)),
+			},
+		},
+	}
+
+	msg := bot.NewMessage(job.ChatID, "нравится?")
+	msg.ReplyMarkup = keyboard
+	h.bot.Send(msg)
+
+	go func(jobID uint64, items []catalog.ImageItem) {
+		jsn, _ := json.Marshal(res.Items)
+		// кладем в редис
+		err = h.surveyService.SaveToCache(ctx, jobID, jsn)
+	}(job.JobID, res.Items)
+
+	// пусть в редис сохраняет jobid: capsuleItems +
+	// в инлайн кнопку ставит 1:jobid или 0:jobid +
+	// на хендле callback берет callbach.text делит символом :
+	// затем если начало 1/0 то достать из редиса capsuleItems по ключу который остался
+	// затем пишем в постгрю в зависимости от чиселки 0 или 1
+	// затем удаляем из редиса
+	// ------------
+
 	if err != nil {
 		h.log.Error("ошибка отправки фото", "err", err)
 		_ = h.sendText(job, "Произошла ошибка. Нажми /start")

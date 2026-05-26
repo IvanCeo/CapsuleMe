@@ -1,15 +1,10 @@
 -- +goose Up
-CREATE TABLE IF NOT EXISTS image_items (
-    id UUID PRIMARY KEY,
-    object_id UUID NOT NULL,
-    ext TEXT NOT NULL,
-    gender TEXT,
-    category TEXT,
-    style TEXT,
-    color TEXT,
-    season TEXT,
-    material TEXT,
-    description TEXT
+
+CREATE TABLE feedback (
+    id BIGSERIAL PRIMARY KEY,
+    score VARCHAR(10) NOT NULL,
+    capsule TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- +goose Down

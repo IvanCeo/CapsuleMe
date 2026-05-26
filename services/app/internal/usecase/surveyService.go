@@ -3,19 +3,32 @@ package usecase
 import (
 	"capsule-me/internal/domain/catalog"
 	"capsule-me/internal/domain/survey"
+	"context"
 	"fmt"
 	"log/slog"
 	"os"
 	"path/filepath"
+	"strconv"
 )
 
 // оркестрирует работу доменных сервисов
 type SurveyService struct {
-	engine  *survey.SurveyEngine
-	def     *survey.SurveyDefinition
-	mapper  *survey.FeatureMapper
-	session SessionRepo
-	log     *slog.Logger
+	engine   *survey.SurveyEngine
+	def      *survey.SurveyDefinition
+	mapper   *survey.FeatureMapper
+	session  SessionRepo
+	log      *slog.Logger
+	cache    cache
+	feedback postgres
+}
+
+type postgres interface {
+	SaveFeedback(ctx context.Context, key, value string) error
+}
+
+type cache interface {
+	SaveToCache(ctx context.Context, key string, value interface{}) error
+	GetFromCache(ctx context.Context, key string) (string, error)
 }
 
 type SessionRepo interface {
@@ -24,7 +37,7 @@ type SessionRepo interface {
 	DeleteByUser(userID int64)
 }
 
-func NewSurveyService(repo SessionRepo, log *slog.Logger) (*SurveyService, error) {
+func NewSurveyService(cache cache, repo SessionRepo, postgres postgres, log *slog.Logger) (*SurveyService, error) {
 	root, _ := os.Getwd()
 	def, err := survey.LoadSurveyDefinitionYAML(filepath.Join(root, "configs", "surveyDefinition.yaml"))
 	if err != nil {
@@ -39,11 +52,13 @@ func NewSurveyService(repo SessionRepo, log *slog.Logger) (*SurveyService, error
 	}
 
 	return &SurveyService{
-		engine:  &survey.SurveyEngine{},
-		def:     def,
-		mapper:  &survey.FeatureMapper{Config: cfg},
-		session: repo,
-		log:     log,
+		engine:   &survey.SurveyEngine{},
+		def:      def,
+		mapper:   &survey.FeatureMapper{Config: cfg},
+		session:  repo,
+		log:      log,
+		cache:    cache,
+		feedback: postgres,
 	}, nil
 }
 
@@ -126,4 +141,16 @@ func (ser *SurveyService) MapIncomingFeature(session *survey.SurveySession) (*ca
 		return nil, err
 	}
 	return &f, nil
+}
+
+func (ser *SurveyService) SaveToCache(ctx context.Context, jobID uint64, capsule []byte) error {
+	return ser.cache.SaveToCache(ctx, strconv.FormatUint(jobID, 10), capsule) // расплата за uint
+}
+
+func (ser *SurveyService) GetFromCache(ctx context.Context, key string) (string, error) {
+	return ser.cache.GetFromCache(ctx, key)
+}
+
+func (ser *SurveyService) SaveFeedback(ctx context.Context, key, value string) error {
+	return ser.feedback.SaveFeedback(ctx, key, value)
 }

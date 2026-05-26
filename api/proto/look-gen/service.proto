@@ -2,4 +2,61 @@ syntax = "proto3";
 
 package lookgen;
 
+import "capsule-gen/service.proto"
+
 option go_package = "capsule-me/internal/gen/lookgen";
+
+service LookGenService {
+  rpc GenerateLooks(GenerateLooksRequest) returns (stream GenerateLooksResponse);
+}
+
+message GenerateLooksRequest {
+  capsulegen.Capsule capsule = 1;
+
+  int32 max_looks = 2;
+
+  bool include_images = 3;
+
+  LookGenerationOptions options = 4;
+}
+
+message LookGenerationOptions {
+  bool use_ml_scoring = 1;
+
+  bool require_diverse_items = 2;
+
+  int32 min_items_per_look = 3;
+
+  int32 max_items_per_look = 4;
+}
+
+message GenerateLooksResponse {
+  oneof payload {
+    LookPack look_pack = 1;
+    LookImageChunk image_chunk = 2;
+  }
+}
+
+message LookPack {
+  repeated Look looks = 1;
+}
+
+message Look {
+  string id = 1;
+
+  repeated capsulegen.Item items = 2;
+
+  double score = 3;
+
+  string template = 4;
+
+  int32 image_index = 5;
+}
+
+message LookImageChunk {
+  string look_id = 1;
+
+  int32 image_index = 2;
+
+  bytes chunk = 3;
+}
