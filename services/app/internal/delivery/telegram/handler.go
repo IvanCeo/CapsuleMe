@@ -269,6 +269,7 @@ func (h *JobHandler) handleAnswer(ctx context.Context, job Job) {
 		return
 	}
 
+	// та самая которая кладет в канал job воркеров
 	res, err := h.catalogService.Recommend(ctx, feature)
 	if err != nil {
 		h.log.Error(
@@ -282,6 +283,8 @@ func (h *JobHandler) handleAnswer(ctx context.Context, job Job) {
 		_ = h.sendText(job, "Произошла ошибка. Нажми /start")
 		return
 	}
+
+	look, err := h.catalogService.RecommendLooks(ctx, res)
 
 	// -------------
 
@@ -300,6 +303,10 @@ func (h *JobHandler) handleAnswer(ctx context.Context, job Job) {
 	msg := bot.NewMessage(job.ChatID, "нравится?")
 	msg.ReplyMarkup = keyboard
 	h.bot.Send(msg)
+
+	phLooks := bot.NewPhoto(job.ChatID, bot.FileBytes{Bytes: look.Outfits[0].Image})
+	phLooks.Caption = "Образ 1"
+	_, err = h.bot.Send(phLooks)
 
 	go func(jobID uint64, items []catalog.ImageItem) {
 		jsn, _ := json.Marshal(res.Items)

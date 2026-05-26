@@ -4,6 +4,7 @@ import (
 	"capsule-me/internal/domain/catalog"
 	capsulegen "capsule-me/internal/gen/capsule-gen"
 	"capsule-me/internal/gen/common"
+	lookgen "capsule-me/internal/gen/look-gen"
 	"context"
 	"errors"
 	"io"
@@ -16,29 +17,40 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 )
 
+type jobType int
+
+const (
+	getCapsule jobType = iota
+	getLooks
+)
+
 // это то, откуда воркеры берут работу, id надо для индентификации запроса, инкремент
 type job struct {
-	id     int32
-	req    *catalog.IncomingFeature
-	ctx    context.Context
-	result chan result
+	id         int32
+	capReq     *catalog.IncomingFeature
+	lookReq    *catalog.Capsule
+	ctx        context.Context
+	capResult  chan capsuleResult
+	lookResult chan lookResult
+	jobtype    jobType
 }
 
-type result struct {
+type capsuleResult struct {
 	id   int32
 	resp *catalog.Capsule
 	err  error
 }
 
 type GrpcCatalogClient struct {
-	mu        *sync.RWMutex
-	wg        *sync.WaitGroup
-	stopped   atomic.Bool
-	workers   int
-	increment func() int32
-	client    capsulegen.CapsuleGenServiceClient
-	jobs      chan job
-	log       *slog.Logger
+	mu            *sync.RWMutex
+	wg            *sync.WaitGroup
+	stopped       atomic.Bool
+	workers       int
+	increment     func() int32
+	capsuleClient capsulegen.CapsuleGenServiceClient
+	lookClient    lookgen.LookGenServiceClient
+	jobs          chan job
+	log           *slog.Logger
 }
 
 func inc() func() int32 {
@@ -49,29 +61,41 @@ func inc() func() int32 {
 	}
 }
 
-func NewGrpcCatalogClient(maxWorkers int, baseURL string, logger *slog.Logger) (*GrpcCatalogClient, error) {
-	conn, err := grpc.NewClient(baseURL, grpc.WithTransportCredentials(insecure.NewCredentials())) // DialOptions сделать потом, они идут как второй аргумент ...DialOptions
+func NewGrpcCatalogClient(maxWorkers int, logger *slog.Logger, capsuleURL, lookURL string) (*GrpcCatalogClient, error) {
+	capsuleConn, err := grpc.NewClient(capsuleURL, grpc.WithTransportCredentials(insecure.NewCredentials())) // DialOptions сделать потом, они идут как второй аргумент ...DialOptions
 	if err != nil {
 		return nil, err
 	}
 	jobs := make(chan job, maxWorkers)
 
-	client := capsulegen.NewCapsuleGenServiceClient(conn)
-	if client == nil {
-		return nil, errors.New("nil client in NewGrpcCatalogClient")
+	capsuleClient := capsulegen.NewCapsuleGenServiceClient(capsuleConn)
+	if capsuleClient == nil {
+		return nil, errors.New("nil client in capsuleClient")
 	}
+
+	lookConn, err := grpc.NewClient(lookURL, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		return nil, err
+	}
+
+	lookClient := lookgen.NewLookGenServiceClient(lookConn)
+	if lookClient == nil {
+		return nil, errors.New("nil client in lookClient")
+	}
+
 	wg := &sync.WaitGroup{}
 	mu := &sync.RWMutex{}
 	increment := inc()
 
 	return &GrpcCatalogClient{
-		mu:        mu,
-		wg:        wg,
-		client:    client,
-		jobs:      jobs,
-		workers:   maxWorkers,
-		increment: increment,
-		log:       logger,
+		mu:            mu,
+		wg:            wg,
+		capsuleClient: capsuleClient,
+		lookClient:    lookClient,
+		jobs:          jobs,
+		workers:       maxWorkers,
+		increment:     increment,
+		log:           logger,
 	}, nil
 }
 
@@ -82,8 +106,14 @@ func (cc *GrpcCatalogClient) Start() {
 		go func() {
 			defer cc.wg.Done()
 			for j := range cc.jobs {
-				res, err := cc.Srecommend(j.ctx, j.req)
-				j.result <- result{id: j.id, resp: res, err: err}
+				switch j.jobtype {
+				case getCapsule:
+					res, err := cc.ForvardRecommend(j.ctx, j.capReq)
+					j.capResult <- capsuleResult{id: j.id, resp: res, err: err}
+				case getLooks:
+					res, err := cc.ForvardRecommendLooks(j.ctx, j.lookReq)
+					j.lookResult <- lookResult{id: j.id, resp: res, err: err}
+				}
 			}
 		}()
 	}
@@ -213,14 +243,15 @@ func (cc *GrpcCatalogClient) submit(job job) bool {
 	}
 }
 
-func (cc *GrpcCatalogClient) Srecommend(ctx context.Context, f *catalog.IncomingFeature) (*catalog.Capsule, error) {
+// направляет запрос напрямую
+func (cc *GrpcCatalogClient) ForvardRecommend(ctx context.Context, f *catalog.IncomingFeature) (*catalog.Capsule, error) {
 	dto, err := toDTO(f)
 	if err != nil {
 		cc.log.Error("to dto err", "err", err)
 		return nil, err
 	}
 
-	stream, err := cc.client.CapsuleGenerate(ctx, dto)
+	stream, err := cc.capsuleClient.CapsuleGenerate(ctx, dto)
 	if err != nil {
 		cc.log.Error("stream err", "err", err)
 		return nil, err
@@ -265,14 +296,16 @@ func (cc *GrpcCatalogClient) Srecommend(ctx context.Context, f *catalog.Incoming
 	return res, nil
 }
 
+// кладет в канал работ, достает из канала работ, им пользуются сверху, без внутрянки
 func (cc *GrpcCatalogClient) Recommend(ctx context.Context, f *catalog.IncomingFeature) (*catalog.Capsule, error) {
-	resChan := make(chan result, cc.workers)
+	resChan := make(chan capsuleResult, cc.workers) // может тут буфер до 1 уменьшить потом
 
 	job := job{
-		id:     cc.increment(),
-		req:    f,
-		ctx:    ctx,
-		result: resChan,
+		id:        cc.increment(),
+		capReq:    f,
+		ctx:       ctx,
+		capResult: resChan,
+		jobtype:   getCapsule,
 	}
 
 	if ok := cc.submit(job); !ok {
@@ -284,7 +317,7 @@ func (cc *GrpcCatalogClient) Recommend(ctx context.Context, f *catalog.IncomingF
 		return nil, ctx.Err()
 	// case <-time.After(5 * time.Second):
 	// return nil, errors.New("capsule timeout")
-	case res := <-job.result:
+	case res := <-job.capResult:
 		return res.resp, res.err
 	}
 }

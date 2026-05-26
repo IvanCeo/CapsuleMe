@@ -3,7 +3,7 @@
 import grpc
 import warnings
 
-from look_gen import service_pb2 as look__gen_dot_service__pb2
+from capsule_gen import service_pb2 as capsule__gen_dot_service__pb2
 
 GRPC_GENERATED_VERSION = '1.78.1'
 GRPC_VERSION = grpc.__version__
@@ -18,14 +18,14 @@ except ImportError:
 if _version_not_supported:
     raise RuntimeError(
         f'The grpc package installed is at version {GRPC_VERSION},'
-        + ' but the generated code in look_gen/service_pb2_grpc.py depends on'
+        + ' but the generated code in capsule_gen/service_pb2_grpc.py depends on'
         + f' grpcio>={GRPC_GENERATED_VERSION}.'
         + f' Please upgrade your grpc module to grpcio>={GRPC_GENERATED_VERSION}'
         + f' or downgrade your generated code using grpcio-tools<={GRPC_VERSION}.'
     )
 
 
-class LookGenServiceStub(object):
+class CapsuleGenServiceStub(object):
     """Missing associated documentation comment in .proto file."""
 
     def __init__(self, channel):
@@ -34,43 +34,43 @@ class LookGenServiceStub(object):
         Args:
             channel: A grpc.Channel.
         """
-        self.GenerateLooks = channel.unary_stream(
-                '/lookgen.LookGenService/GenerateLooks',
-                request_serializer=look__gen_dot_service__pb2.GenerateLooksRequest.SerializeToString,
-                response_deserializer=look__gen_dot_service__pb2.GenerateLooksResponse.FromString,
+        self.CapsuleGenerate = channel.unary_stream(
+                '/capsulegen.CapsuleGenService/CapsuleGenerate',
+                request_serializer=capsule__gen_dot_service__pb2.CapsuleGenerateRequest.SerializeToString,
+                response_deserializer=capsule__gen_dot_service__pb2.CapsuleGenerateResponse.FromString,
                 _registered_method=True)
 
 
-class LookGenServiceServicer(object):
+class CapsuleGenServiceServicer(object):
     """Missing associated documentation comment in .proto file."""
 
-    def GenerateLooks(self, request, context):
+    def CapsuleGenerate(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
 
-def add_LookGenServiceServicer_to_server(servicer, server):
+def add_CapsuleGenServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
-            'GenerateLooks': grpc.unary_stream_rpc_method_handler(
-                    servicer.GenerateLooks,
-                    request_deserializer=look__gen_dot_service__pb2.GenerateLooksRequest.FromString,
-                    response_serializer=look__gen_dot_service__pb2.GenerateLooksResponse.SerializeToString,
+            'CapsuleGenerate': grpc.unary_stream_rpc_method_handler(
+                    servicer.CapsuleGenerate,
+                    request_deserializer=capsule__gen_dot_service__pb2.CapsuleGenerateRequest.FromString,
+                    response_serializer=capsule__gen_dot_service__pb2.CapsuleGenerateResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
-            'lookgen.LookGenService', rpc_method_handlers)
+            'capsulegen.CapsuleGenService', rpc_method_handlers)
     server.add_generic_rpc_handlers((generic_handler,))
-    server.add_registered_method_handlers('lookgen.LookGenService', rpc_method_handlers)
+    server.add_registered_method_handlers('capsulegen.CapsuleGenService', rpc_method_handlers)
 
 
  # This class is part of an EXPERIMENTAL API.
-class LookGenService(object):
+class CapsuleGenService(object):
     """Missing associated documentation comment in .proto file."""
 
     @staticmethod
-    def GenerateLooks(request,
+    def CapsuleGenerate(request,
             target,
             options=(),
             channel_credentials=None,
@@ -83,9 +83,9 @@ class LookGenService(object):
         return grpc.experimental.unary_stream(
             request,
             target,
-            '/lookgen.LookGenService/GenerateLooks',
-            look__gen_dot_service__pb2.GenerateLooksRequest.SerializeToString,
-            look__gen_dot_service__pb2.GenerateLooksResponse.FromString,
+            '/capsulegen.CapsuleGenService/CapsuleGenerate',
+            capsule__gen_dot_service__pb2.CapsuleGenerateRequest.SerializeToString,
+            capsule__gen_dot_service__pb2.CapsuleGenerateResponse.FromString,
             options,
             channel_credentials,
             insecure,

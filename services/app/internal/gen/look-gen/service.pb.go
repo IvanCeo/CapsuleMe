@@ -7,10 +7,13 @@
 package lookgen
 
 import (
+	capsulegen "capsule-me/internal/gen/capsule-gen"
+	reflect "reflect"
+	sync "sync"
+	unsafe "unsafe"
+
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
-	reflect "reflect"
-	unsafe "unsafe"
 )
 
 const (
@@ -20,19 +23,478 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+type GenerateLooksRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Capsule       *capsulegen.Capsule    `protobuf:"bytes,1,opt,name=capsule,proto3" json:"capsule,omitempty"`
+	MaxLooks      int32                  `protobuf:"varint,2,opt,name=max_looks,json=maxLooks,proto3" json:"max_looks,omitempty"`
+	IncludeImages bool                   `protobuf:"varint,3,opt,name=include_images,json=includeImages,proto3" json:"include_images,omitempty"`
+	Options       *LookGenerationOptions `protobuf:"bytes,4,opt,name=options,proto3" json:"options,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GenerateLooksRequest) Reset() {
+	*x = GenerateLooksRequest{}
+	mi := &file_look_gen_service_proto_msgTypes[0]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GenerateLooksRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GenerateLooksRequest) ProtoMessage() {}
+
+func (x *GenerateLooksRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_look_gen_service_proto_msgTypes[0]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GenerateLooksRequest.ProtoReflect.Descriptor instead.
+func (*GenerateLooksRequest) Descriptor() ([]byte, []int) {
+	return file_look_gen_service_proto_rawDescGZIP(), []int{0}
+}
+
+func (x *GenerateLooksRequest) GetCapsule() *capsulegen.Capsule {
+	if x != nil {
+		return x.Capsule
+	}
+	return nil
+}
+
+func (x *GenerateLooksRequest) GetMaxLooks() int32 {
+	if x != nil {
+		return x.MaxLooks
+	}
+	return 0
+}
+
+func (x *GenerateLooksRequest) GetIncludeImages() bool {
+	if x != nil {
+		return x.IncludeImages
+	}
+	return false
+}
+
+func (x *GenerateLooksRequest) GetOptions() *LookGenerationOptions {
+	if x != nil {
+		return x.Options
+	}
+	return nil
+}
+
+type LookGenerationOptions struct {
+	state               protoimpl.MessageState `protogen:"open.v1"`
+	UseMlScoring        bool                   `protobuf:"varint,1,opt,name=use_ml_scoring,json=useMlScoring,proto3" json:"use_ml_scoring,omitempty"`
+	RequireDiverseItems bool                   `protobuf:"varint,2,opt,name=require_diverse_items,json=requireDiverseItems,proto3" json:"require_diverse_items,omitempty"`
+	MinItemsPerLook     int32                  `protobuf:"varint,3,opt,name=min_items_per_look,json=minItemsPerLook,proto3" json:"min_items_per_look,omitempty"`
+	MaxItemsPerLook     int32                  `protobuf:"varint,4,opt,name=max_items_per_look,json=maxItemsPerLook,proto3" json:"max_items_per_look,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
+}
+
+func (x *LookGenerationOptions) Reset() {
+	*x = LookGenerationOptions{}
+	mi := &file_look_gen_service_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *LookGenerationOptions) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*LookGenerationOptions) ProtoMessage() {}
+
+func (x *LookGenerationOptions) ProtoReflect() protoreflect.Message {
+	mi := &file_look_gen_service_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use LookGenerationOptions.ProtoReflect.Descriptor instead.
+func (*LookGenerationOptions) Descriptor() ([]byte, []int) {
+	return file_look_gen_service_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *LookGenerationOptions) GetUseMlScoring() bool {
+	if x != nil {
+		return x.UseMlScoring
+	}
+	return false
+}
+
+func (x *LookGenerationOptions) GetRequireDiverseItems() bool {
+	if x != nil {
+		return x.RequireDiverseItems
+	}
+	return false
+}
+
+func (x *LookGenerationOptions) GetMinItemsPerLook() int32 {
+	if x != nil {
+		return x.MinItemsPerLook
+	}
+	return 0
+}
+
+func (x *LookGenerationOptions) GetMaxItemsPerLook() int32 {
+	if x != nil {
+		return x.MaxItemsPerLook
+	}
+	return 0
+}
+
+type GenerateLooksResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Types that are valid to be assigned to Payload:
+	//
+	//	*GenerateLooksResponse_LookPack
+	//	*GenerateLooksResponse_ImageChunk
+	Payload       isGenerateLooksResponse_Payload `protobuf_oneof:"payload"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GenerateLooksResponse) Reset() {
+	*x = GenerateLooksResponse{}
+	mi := &file_look_gen_service_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GenerateLooksResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GenerateLooksResponse) ProtoMessage() {}
+
+func (x *GenerateLooksResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_look_gen_service_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GenerateLooksResponse.ProtoReflect.Descriptor instead.
+func (*GenerateLooksResponse) Descriptor() ([]byte, []int) {
+	return file_look_gen_service_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *GenerateLooksResponse) GetPayload() isGenerateLooksResponse_Payload {
+	if x != nil {
+		return x.Payload
+	}
+	return nil
+}
+
+func (x *GenerateLooksResponse) GetLookPack() *LookPack {
+	if x != nil {
+		if x, ok := x.Payload.(*GenerateLooksResponse_LookPack); ok {
+			return x.LookPack
+		}
+	}
+	return nil
+}
+
+func (x *GenerateLooksResponse) GetImageChunk() *LookImageChunk {
+	if x != nil {
+		if x, ok := x.Payload.(*GenerateLooksResponse_ImageChunk); ok {
+			return x.ImageChunk
+		}
+	}
+	return nil
+}
+
+type isGenerateLooksResponse_Payload interface {
+	isGenerateLooksResponse_Payload()
+}
+
+type GenerateLooksResponse_LookPack struct {
+	LookPack *LookPack `protobuf:"bytes,1,opt,name=look_pack,json=lookPack,proto3,oneof"`
+}
+
+type GenerateLooksResponse_ImageChunk struct {
+	ImageChunk *LookImageChunk `protobuf:"bytes,2,opt,name=image_chunk,json=imageChunk,proto3,oneof"`
+}
+
+func (*GenerateLooksResponse_LookPack) isGenerateLooksResponse_Payload() {}
+
+func (*GenerateLooksResponse_ImageChunk) isGenerateLooksResponse_Payload() {}
+
+type LookPack struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Looks         []*Look                `protobuf:"bytes,1,rep,name=looks,proto3" json:"looks,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *LookPack) Reset() {
+	*x = LookPack{}
+	mi := &file_look_gen_service_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *LookPack) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*LookPack) ProtoMessage() {}
+
+func (x *LookPack) ProtoReflect() protoreflect.Message {
+	mi := &file_look_gen_service_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use LookPack.ProtoReflect.Descriptor instead.
+func (*LookPack) Descriptor() ([]byte, []int) {
+	return file_look_gen_service_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *LookPack) GetLooks() []*Look {
+	if x != nil {
+		return x.Looks
+	}
+	return nil
+}
+
+type Look struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Items         []*capsulegen.Item     `protobuf:"bytes,2,rep,name=items,proto3" json:"items,omitempty"`
+	Score         float64                `protobuf:"fixed64,3,opt,name=score,proto3" json:"score,omitempty"`
+	Template      string                 `protobuf:"bytes,4,opt,name=template,proto3" json:"template,omitempty"`
+	ImageIndex    int32                  `protobuf:"varint,5,opt,name=image_index,json=imageIndex,proto3" json:"image_index,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Look) Reset() {
+	*x = Look{}
+	mi := &file_look_gen_service_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Look) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Look) ProtoMessage() {}
+
+func (x *Look) ProtoReflect() protoreflect.Message {
+	mi := &file_look_gen_service_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Look.ProtoReflect.Descriptor instead.
+func (*Look) Descriptor() ([]byte, []int) {
+	return file_look_gen_service_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *Look) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *Look) GetItems() []*capsulegen.Item {
+	if x != nil {
+		return x.Items
+	}
+	return nil
+}
+
+func (x *Look) GetScore() float64 {
+	if x != nil {
+		return x.Score
+	}
+	return 0
+}
+
+func (x *Look) GetTemplate() string {
+	if x != nil {
+		return x.Template
+	}
+	return ""
+}
+
+func (x *Look) GetImageIndex() int32 {
+	if x != nil {
+		return x.ImageIndex
+	}
+	return 0
+}
+
+type LookImageChunk struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	LookId        string                 `protobuf:"bytes,1,opt,name=look_id,json=lookId,proto3" json:"look_id,omitempty"`
+	ImageIndex    int32                  `protobuf:"varint,2,opt,name=image_index,json=imageIndex,proto3" json:"image_index,omitempty"`
+	Chunk         []byte                 `protobuf:"bytes,3,opt,name=chunk,proto3" json:"chunk,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *LookImageChunk) Reset() {
+	*x = LookImageChunk{}
+	mi := &file_look_gen_service_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *LookImageChunk) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*LookImageChunk) ProtoMessage() {}
+
+func (x *LookImageChunk) ProtoReflect() protoreflect.Message {
+	mi := &file_look_gen_service_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use LookImageChunk.ProtoReflect.Descriptor instead.
+func (*LookImageChunk) Descriptor() ([]byte, []int) {
+	return file_look_gen_service_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *LookImageChunk) GetLookId() string {
+	if x != nil {
+		return x.LookId
+	}
+	return ""
+}
+
+func (x *LookImageChunk) GetImageIndex() int32 {
+	if x != nil {
+		return x.ImageIndex
+	}
+	return 0
+}
+
+func (x *LookImageChunk) GetChunk() []byte {
+	if x != nil {
+		return x.Chunk
+	}
+	return nil
+}
+
 var File_look_gen_service_proto protoreflect.FileDescriptor
 
 const file_look_gen_service_proto_rawDesc = "" +
 	"\n" +
-	"\x16look-gen/service.proto\x12\alookgenB!Z\x1fcapsule-me/internal/gen/lookgenb\x06proto3"
+	"\x16look-gen/service.proto\x12\alookgen\x1a\x19capsule-gen/service.proto\"\xc3\x01\n" +
+	"\x14GenerateLooksRequest\x12-\n" +
+	"\acapsule\x18\x01 \x01(\v2\x13.capsulegen.CapsuleR\acapsule\x12\x1b\n" +
+	"\tmax_looks\x18\x02 \x01(\x05R\bmaxLooks\x12%\n" +
+	"\x0einclude_images\x18\x03 \x01(\bR\rincludeImages\x128\n" +
+	"\aoptions\x18\x04 \x01(\v2\x1e.lookgen.LookGenerationOptionsR\aoptions\"\xcb\x01\n" +
+	"\x15LookGenerationOptions\x12$\n" +
+	"\x0euse_ml_scoring\x18\x01 \x01(\bR\fuseMlScoring\x122\n" +
+	"\x15require_diverse_items\x18\x02 \x01(\bR\x13requireDiverseItems\x12+\n" +
+	"\x12min_items_per_look\x18\x03 \x01(\x05R\x0fminItemsPerLook\x12+\n" +
+	"\x12max_items_per_look\x18\x04 \x01(\x05R\x0fmaxItemsPerLook\"\x90\x01\n" +
+	"\x15GenerateLooksResponse\x120\n" +
+	"\tlook_pack\x18\x01 \x01(\v2\x11.lookgen.LookPackH\x00R\blookPack\x12:\n" +
+	"\vimage_chunk\x18\x02 \x01(\v2\x17.lookgen.LookImageChunkH\x00R\n" +
+	"imageChunkB\t\n" +
+	"\apayload\"/\n" +
+	"\bLookPack\x12#\n" +
+	"\x05looks\x18\x01 \x03(\v2\r.lookgen.LookR\x05looks\"\x91\x01\n" +
+	"\x04Look\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12&\n" +
+	"\x05items\x18\x02 \x03(\v2\x10.capsulegen.ItemR\x05items\x12\x14\n" +
+	"\x05score\x18\x03 \x01(\x01R\x05score\x12\x1a\n" +
+	"\btemplate\x18\x04 \x01(\tR\btemplate\x12\x1f\n" +
+	"\vimage_index\x18\x05 \x01(\x05R\n" +
+	"imageIndex\"`\n" +
+	"\x0eLookImageChunk\x12\x17\n" +
+	"\alook_id\x18\x01 \x01(\tR\x06lookId\x12\x1f\n" +
+	"\vimage_index\x18\x02 \x01(\x05R\n" +
+	"imageIndex\x12\x14\n" +
+	"\x05chunk\x18\x03 \x01(\fR\x05chunk2b\n" +
+	"\x0eLookGenService\x12P\n" +
+	"\rGenerateLooks\x12\x1d.lookgen.GenerateLooksRequest\x1a\x1e.lookgen.GenerateLooksResponse0\x01B!Z\x1fcapsule-me/internal/gen/lookgenb\x06proto3"
 
-var file_look_gen_service_proto_goTypes = []any{}
+var (
+	file_look_gen_service_proto_rawDescOnce sync.Once
+	file_look_gen_service_proto_rawDescData []byte
+)
+
+func file_look_gen_service_proto_rawDescGZIP() []byte {
+	file_look_gen_service_proto_rawDescOnce.Do(func() {
+		file_look_gen_service_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_look_gen_service_proto_rawDesc), len(file_look_gen_service_proto_rawDesc)))
+	})
+	return file_look_gen_service_proto_rawDescData
+}
+
+var file_look_gen_service_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
+var file_look_gen_service_proto_goTypes = []any{
+	(*GenerateLooksRequest)(nil),  // 0: lookgen.GenerateLooksRequest
+	(*LookGenerationOptions)(nil), // 1: lookgen.LookGenerationOptions
+	(*GenerateLooksResponse)(nil), // 2: lookgen.GenerateLooksResponse
+	(*LookPack)(nil),              // 3: lookgen.LookPack
+	(*Look)(nil),                  // 4: lookgen.Look
+	(*LookImageChunk)(nil),        // 5: lookgen.LookImageChunk
+	(*capsulegen.Capsule)(nil),    // 6: capsulegen.Capsule
+	(*capsulegen.Item)(nil),       // 7: capsulegen.Item
+}
 var file_look_gen_service_proto_depIdxs = []int32{
-	0, // [0:0] is the sub-list for method output_type
-	0, // [0:0] is the sub-list for method input_type
-	0, // [0:0] is the sub-list for extension type_name
-	0, // [0:0] is the sub-list for extension extendee
-	0, // [0:0] is the sub-list for field type_name
+	6, // 0: lookgen.GenerateLooksRequest.capsule:type_name -> capsulegen.Capsule
+	1, // 1: lookgen.GenerateLooksRequest.options:type_name -> lookgen.LookGenerationOptions
+	3, // 2: lookgen.GenerateLooksResponse.look_pack:type_name -> lookgen.LookPack
+	5, // 3: lookgen.GenerateLooksResponse.image_chunk:type_name -> lookgen.LookImageChunk
+	4, // 4: lookgen.LookPack.looks:type_name -> lookgen.Look
+	7, // 5: lookgen.Look.items:type_name -> capsulegen.Item
+	0, // 6: lookgen.LookGenService.GenerateLooks:input_type -> lookgen.GenerateLooksRequest
+	2, // 7: lookgen.LookGenService.GenerateLooks:output_type -> lookgen.GenerateLooksResponse
+	7, // [7:8] is the sub-list for method output_type
+	6, // [6:7] is the sub-list for method input_type
+	6, // [6:6] is the sub-list for extension type_name
+	6, // [6:6] is the sub-list for extension extendee
+	0, // [0:6] is the sub-list for field type_name
 }
 
 func init() { file_look_gen_service_proto_init() }
@@ -40,18 +502,23 @@ func file_look_gen_service_proto_init() {
 	if File_look_gen_service_proto != nil {
 		return
 	}
+	file_look_gen_service_proto_msgTypes[2].OneofWrappers = []any{
+		(*GenerateLooksResponse_LookPack)(nil),
+		(*GenerateLooksResponse_ImageChunk)(nil),
+	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_look_gen_service_proto_rawDesc), len(file_look_gen_service_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   0,
+			NumMessages:   6,
 			NumExtensions: 0,
-			NumServices:   0,
+			NumServices:   1,
 		},
 		GoTypes:           file_look_gen_service_proto_goTypes,
 		DependencyIndexes: file_look_gen_service_proto_depIdxs,
+		MessageInfos:      file_look_gen_service_proto_msgTypes,
 	}.Build()
 	File_look_gen_service_proto = out.File
 	file_look_gen_service_proto_goTypes = nil

@@ -8,6 +8,7 @@ type Recommender struct {
 
 type ImageRepository interface {
 	Recommend(ctx context.Context, f *IncomingFeature) (*Capsule, error)
+	RecommendLooks(ctx context.Context, in *Capsule) (*Recommendations, error)
 }
 
 func NewRecommender(repo ImageRepository) *Recommender {
@@ -16,4 +17,8 @@ func NewRecommender(repo ImageRepository) *Recommender {
 
 func (r *Recommender) Recommend(ctx context.Context, f *IncomingFeature) (*Capsule, error) {
 	return r.repo.Recommend(ctx, f)
+}
+
+func (r *Recommender) RecommendLooks(ctx context.Context, in *Capsule) (*Recommendations, error) {
+	return r.repo.RecommendLooks(ctx, in)
 }

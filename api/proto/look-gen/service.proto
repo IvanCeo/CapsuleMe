@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package lookgen;
 
-import "capsule-gen/service.proto"
+import "capsule-gen/service.proto";
 
 option go_package = "capsule-me/internal/gen/lookgen";
 

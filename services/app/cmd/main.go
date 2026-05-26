@@ -31,7 +31,7 @@ func newCargo(c *grpc.GrpcCatalogClient, l *slog.Logger) *cargo {
 }
 
 func (c *cargo) cargoHandler(w http.ResponseWriter, r *http.Request) {
-	if _, err := c.catalog.Srecommend(context.Background(), &catalog.IncomingFeature{}); err != nil {
+	if _, err := c.catalog.ForvardRecommend(context.Background(), &catalog.IncomingFeature{}); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		c.logger.Error("maintest err", "err", err)
 		return
@@ -84,7 +84,9 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	client, err := grpc.NewGrpcCatalogClient(5, "localhost:50052", log2)
+	client, err := grpc.NewGrpcCatalogClient(5, log2, "localhost:50052", "localhost:50053")
+	// localhost:50052 capsuleService
+	// localhost:50053 lookService
 	if err != nil {
 		log.Fatalf("failed to create gRPC client: %v", err)
 	}

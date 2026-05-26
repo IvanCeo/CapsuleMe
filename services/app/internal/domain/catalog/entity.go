@@ -53,5 +53,6 @@ type Recommendations struct {
 }
 
 type Outfit struct {
+	Image []byte
 	Items []ImageItem
 }

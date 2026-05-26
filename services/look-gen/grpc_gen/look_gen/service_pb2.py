@@ -22,9 +22,10 @@ _runtime_version.ValidateProtobufRuntimeVersion(
 _sym_db = _symbol_database.Default()
 
 
+from capsule_gen import service_pb2 as capsule__gen_dot_service__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x16look-gen/service.proto\x12\x07lookgenB!Z\x1f\x63\x61psule-me/internal/gen/lookgenb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x16look-gen/service.proto\x12\x07lookgen\x1a\x19\x63\x61psule-gen/service.proto\"\x98\x01\n\x14GenerateLooksRequest\x12$\n\x07\x63\x61psule\x18\x01 \x01(\x0b\x32\x13.capsulegen.Capsule\x12\x11\n\tmax_looks\x18\x02 \x01(\x05\x12\x16\n\x0einclude_images\x18\x03 \x01(\x08\x12/\n\x07options\x18\x04 \x01(\x0b\x32\x1e.lookgen.LookGenerationOptions\"\x86\x01\n\x15LookGenerationOptions\x12\x16\n\x0euse_ml_scoring\x18\x01 \x01(\x08\x12\x1d\n\x15require_diverse_items\x18\x02 \x01(\x08\x12\x1a\n\x12min_items_per_look\x18\x03 \x01(\x05\x12\x1a\n\x12max_items_per_look\x18\x04 \x01(\x05\"z\n\x15GenerateLooksResponse\x12&\n\tlook_pack\x18\x01 \x01(\x0b\x32\x11.lookgen.LookPackH\x00\x12.\n\x0bimage_chunk\x18\x02 \x01(\x0b\x32\x17.lookgen.LookImageChunkH\x00\x42\t\n\x07payload\"(\n\x08LookPack\x12\x1c\n\x05looks\x18\x01 \x03(\x0b\x32\r.lookgen.Look\"i\n\x04Look\x12\n\n\x02id\x18\x01 \x01(\t\x12\x1f\n\x05items\x18\x02 \x03(\x0b\x32\x10.capsulegen.Item\x12\r\n\x05score\x18\x03 \x01(\x01\x12\x10\n\x08template\x18\x04 \x01(\t\x12\x13\n\x0bimage_index\x18\x05 \x01(\x05\"E\n\x0eLookImageChunk\x12\x0f\n\x07look_id\x18\x01 \x01(\t\x12\x13\n\x0bimage_index\x18\x02 \x01(\x05\x12\r\n\x05\x63hunk\x18\x03 \x01(\x0c\x32\x62\n\x0eLookGenService\x12P\n\rGenerateLooks\x12\x1d.lookgen.GenerateLooksRequest\x1a\x1e.lookgen.GenerateLooksResponse0\x01\x42!Z\x1f\x63\x61psule-me/internal/gen/lookgenb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -32,4 +33,18 @@ _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'look_gen.service_pb2', _glo
 if not _descriptor._USE_C_DESCRIPTORS:
   _globals['DESCRIPTOR']._loaded_options = None
   _globals['DESCRIPTOR']._serialized_options = b'Z\037capsule-me/internal/gen/lookgen'
+  _globals['_GENERATELOOKSREQUEST']._serialized_start=63
+  _globals['_GENERATELOOKSREQUEST']._serialized_end=215
+  _globals['_LOOKGENERATIONOPTIONS']._serialized_start=218
+  _globals['_LOOKGENERATIONOPTIONS']._serialized_end=352
+  _globals['_GENERATELOOKSRESPONSE']._serialized_start=354
+  _globals['_GENERATELOOKSRESPONSE']._serialized_end=476
+  _globals['_LOOKPACK']._serialized_start=478
+  _globals['_LOOKPACK']._serialized_end=518
+  _globals['_LOOK']._serialized_start=520
+  _globals['_LOOK']._serialized_end=625
+  _globals['_LOOKIMAGECHUNK']._serialized_start=627
+  _globals['_LOOKIMAGECHUNK']._serialized_end=696
+  _globals['_LOOKGENSERVICE']._serialized_start=698
+  _globals['_LOOKGENSERVICE']._serialized_end=796
 # @@protoc_insertion_point(module_scope)
