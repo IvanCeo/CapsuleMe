@@ -8,7 +8,6 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
-	"strconv"
 )
 
 // оркестрирует работу доменных сервисов
@@ -27,8 +26,12 @@ type postgres interface {
 }
 
 type cache interface {
-	SaveToCache(ctx context.Context, key string, value interface{}) error
-	GetFromCache(ctx context.Context, key string) (string, error)
+	SaveIncomingFeature(chatID int64, f *catalog.IncomingFeature) error
+	GetIncomingFeatureByID(chatID int64) (*catalog.IncomingFeature, error)
+	SaveCapsule(chatID int64, cap *catalog.Capsule) error
+	GetCapsuleByID(chatID int64) (*catalog.Capsule, error)
+	SaveLooks(chatID int64, r *catalog.Recommendations) error
+	GetLookByNumAndID(chatID int64, num int) (*catalog.Outfit, error)
 }
 
 type SessionRepo interface {
@@ -143,14 +146,26 @@ func (ser *SurveyService) MapIncomingFeature(session *survey.SurveySession) (*ca
 	return &f, nil
 }
 
-func (ser *SurveyService) SaveToCache(ctx context.Context, jobID uint64, capsule []byte) error {
-	return ser.cache.SaveToCache(ctx, strconv.FormatUint(jobID, 10), capsule) // расплата за uint
+func (ser *SurveyService) SaveIncomingFeature(chatID int64, f *catalog.IncomingFeature) error {
+	return ser.cache.SaveIncomingFeature(chatID, f)
 }
 
-func (ser *SurveyService) GetFromCache(ctx context.Context, key string) (string, error) {
-	return ser.cache.GetFromCache(ctx, key)
+func (ser *SurveyService) GetIncomingFeatureByID(chatID int64) (*catalog.IncomingFeature, error) {
+	return ser.cache.GetIncomingFeatureByID(chatID)
 }
 
-func (ser *SurveyService) SaveFeedback(ctx context.Context, key, value string) error {
-	return ser.feedback.SaveFeedback(ctx, key, value)
+func (ser *SurveyService) SaveCapsule(chatID int64, cap *catalog.Capsule) error {
+	return ser.cache.SaveCapsule(chatID, cap)
+}
+
+func (ser *SurveyService) GetCapsuleByID(chatID int64) (*catalog.Capsule, error) {
+	return ser.cache.GetCapsuleByID(chatID)
+}
+
+func (ser *SurveyService) SaveLooks(chatID int64, r *catalog.Recommendations) error {
+	return ser.cache.SaveLooks(chatID, r)
+}
+
+func (ser *SurveyService) GetLookByNumAndID(chatID int64, num int) (*catalog.Outfit, error) {
+	return ser.cache.GetLookByNumAndID(chatID, num)
 }

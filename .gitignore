@@ -1,3 +1,7 @@
 services/app/app.env
 services/capsule-gen/.env
 services/look-gen/.env
+services/capsule-gen/combined
+services/look-gen/combined
+services/capsule-gen/images_new
+services/look-gen/images_new

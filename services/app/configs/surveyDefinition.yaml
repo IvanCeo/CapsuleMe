@@ -36,10 +36,8 @@ questions:
     text: "Предпочтения по цветам?"
     options:
       - value: dark
-        label: "🎨 Тёмная"
+        label: "🖤 Тёмная"
       - value: light
-        label: "🎨 Светлая"
-      - value: bright
-        label: "🎨 Яркая"
+        label: "🤍 Светлая"
       - value: none
         label: "🌈 Без ограничений"

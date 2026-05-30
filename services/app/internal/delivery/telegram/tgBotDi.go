@@ -2,7 +2,6 @@ package telegram
 
 import (
 	p "capsule-me/internal/adapter/postgres"
-	"capsule-me/internal/adapter/redis"
 	"capsule-me/internal/delivery/grpc"
 	"capsule-me/internal/domain/catalog"
 	"capsule-me/internal/logger"
@@ -38,10 +37,12 @@ func NewBot(catalogClient *grpc.GrpcCatalogClient) (*Bot, error) {
 	if REDIS_ADDR == "" || REDIS_PASS == "" {
 		return nil, errors.New("no redis env")
 	}
-	cache, err := redis.NewRedis(REDIS_ADDR, REDIS_PASS)
-	if err != nil {
-		return nil, err
-	}
+	// cache, err := redis.NewRedis(REDIS_ADDR, REDIS_PASS)
+	// if err != nil {
+	// 	return nil, err
+	// }
+
+	cache := mocks.NewCache(3)
 
 	ctx := context.Background()
 	postgres, err := p.NewPostgres(ctx)
