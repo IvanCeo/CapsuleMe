@@ -1,21 +1,13 @@
-import itertools
 import logging
 import math
 import os
 import random
-import threading
 import uuid
-from collections import Counter
 from dataclasses import dataclass
 
 import grpc
 import pandas as pd
 from PIL import Image
-
-try:
-    from model import OutfitEmbeddingModel
-except Exception:
-    OutfitEmbeddingModel = None
 
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -23,11 +15,6 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_PATH = os.getenv(
     "CAPSULE_METADATA_PATH",
     os.path.join(BASE_DIR, "metadata_uuid_prod.csv"),
-)
-
-OUTFITS_PATH = os.getenv(
-    "CAPSULE_OUTFITS_PATH",
-    os.path.join(BASE_DIR, "meta_outfits.csv"),
 )
 
 IMAGES_FOLDER = os.getenv(
@@ -44,16 +31,13 @@ os.makedirs(COMBINED_FOLDER, exist_ok=True)
 logging.basicConfig(level=logging.INFO)
 
 DATA = pd.read_csv(DATA_PATH)
-DF_OUTFITS = pd.read_csv(OUTFITS_PATH) if os.path.exists(OUTFITS_PATH) else pd.DataFrame()
-
-CATEGORY_ORDER = ["top", "bottom", "dress", "outerwear", "footwear", "accessory"]
 
 
 @dataclass
 class CapsuleResult:
     items: list[dict]
     image_path: str
-    looks_count: int
+    looks_count: int = 0
 
 
 class CapsuleRecommendationError(Exception):
@@ -61,6 +45,7 @@ class CapsuleRecommendationError(Exception):
         super().__init__(message)
         self.code = code
         self.message = message
+
 
 def str_value(value, default: str = "") -> str:
     if value is None:
@@ -77,12 +62,15 @@ def normalize_text(value) -> str:
     return str_value(value).lower().strip()
 
 
-_embedding_lock = threading.Lock()
-_embedding_model = None
-_reference_embeddings = None
-
-
 def generate_capsule(gender: str, style: str, season: str, palette: str) -> CapsuleResult:
+    logging.info(
+        "generate capsule: gender=%s style=%s season=%s palette=%s",
+        gender,
+        style,
+        season,
+        palette,
+    )
+
     filtered = recommend_outfit(
         DATA,
         gender=gender,
@@ -123,7 +111,7 @@ def generate_capsule(gender: str, style: str, season: str, palette: str) -> Caps
         )
 
     selected_group = None
-    selected_paths = []
+    selected_paths: list[str] = []
 
     for group in groups:
         paths = image_paths_for_capsule(group)
@@ -138,20 +126,10 @@ def generate_capsule(gender: str, style: str, season: str, palette: str) -> Caps
             "capsule generated, but no image files found",
         )
 
+    # ВАЖНО ДЛЯ ДЕПЛОЯ:
+    # capsule-gen должен быстро вернуть капсулу и склеенную картинку.
+    # Тяжёлый ML-скоринг образов через CLIP здесь намеренно отключён.
     looks_count = 0
-
-    try:
-        looks = generate_looks_from_capsule(
-            capsule_df=selected_group,
-            user_gender=gender,
-            templates_by_gender=templates_by_gender,
-            embedding_model=get_embedding_model(),
-            reference_embeddings=get_reference_embeddings(),
-            top_k=6,
-        )
-        looks_count = len(looks)
-    except Exception:
-        logging.exception("failed to generate looks")
 
     combined_path = combine_clothes(selected_paths)
     if not combined_path or not os.path.exists(combined_path):
@@ -159,6 +137,13 @@ def generate_capsule(gender: str, style: str, season: str, palette: str) -> Caps
             grpc.StatusCode.INTERNAL,
             "failed to combine capsule images",
         )
+
+    logging.info(
+        "capsule generated: items=%s image_paths=%s combined=%s",
+        len(selected_group),
+        len(selected_paths),
+        combined_path,
+    )
 
     return CapsuleResult(
         items=selected_group.to_dict("records"),
@@ -208,6 +193,9 @@ def detect_palette(color: str) -> str:
 
     if color == "light":
         return "light"
+
+    if color == "bright":
+        return "bright"
 
     return "neutral"
 
@@ -282,202 +270,6 @@ def item_key(item: dict) -> str:
     return str(item.get("uuid") or item.get("id") or item.get("article") or uuid.uuid4())
 
 
-def extract_templates_by_gender(df: pd.DataFrame) -> dict[str, Counter]:
-    templates = {"male": Counter(), "female": Counter()}
-
-    if df.empty:
-        return templates
-
-    for (_, gender), group in df.groupby(["outfit", "gender"]):
-        gender = normalize_text(gender)
-        if gender not in templates:
-            continue
-
-        template = tuple(
-            sorted(
-                str(v).strip().lower()
-                for v in group["category_group"].dropna().unique()
-                if str(v).strip()
-            )
-        )
-
-        if template:
-            templates[gender][template] += 1
-
-    return templates
-
-
-def filter_templates(templates_counter: Counter, min_count: int) -> list[tuple[str, ...]]:
-    return [template for template, count in templates_counter.items() if count >= min_count]
-
-
-def build_templates_by_gender() -> dict[str, list[tuple[str, ...]]]:
-    counters = extract_templates_by_gender(DF_OUTFITS)
-
-    male = filter_templates(counters["male"], min_count=6)
-    female = filter_templates(counters["female"], min_count=4)
-
-    if not male:
-        male = [
-            ("top", "bottom", "footwear"),
-            ("top", "bottom", "outerwear", "footwear"),
-        ]
-
-    if not female:
-        female = [
-            ("top", "bottom", "footwear"),
-            ("top", "bottom", "outerwear", "footwear"),
-            ("dress", "footwear"),
-        ]
-
-    return {"male": male, "female": female}
-
-
-templates_by_gender = build_templates_by_gender()
-
-
-def get_embedding_model():
-    global _embedding_model
-
-    if OutfitEmbeddingModel is None:
-        return None
-
-    if _embedding_model is not None:
-        return _embedding_model
-
-    with _embedding_lock:
-        if _embedding_model is None:
-            _embedding_model = OutfitEmbeddingModel()
-
-    return _embedding_model
-
-
-def get_reference_embeddings() -> list[dict]:
-    global _reference_embeddings
-
-    if _reference_embeddings is not None:
-        return _reference_embeddings
-
-    model = get_embedding_model()
-    if model is None or DF_OUTFITS.empty:
-        _reference_embeddings = []
-        return _reference_embeddings
-
-    refs = []
-
-    for outfit_id, group in DF_OUTFITS.groupby("outfit"):
-        group = group.copy()
-        group["path"] = group.apply(resolve_reference_image_path, axis=1)
-        group = group[group["path"].apply(lambda p: bool(p) and os.path.exists(p))]
-
-        if group.empty:
-            continue
-
-        try:
-            emb = model.outfit_embedding(group)
-            refs.append({"outfit": outfit_id, "embedding": emb})
-        except Exception:
-            logging.exception("failed to build reference embedding for outfit=%s", outfit_id)
-
-    _reference_embeddings = refs
-    return _reference_embeddings
-
-
-def generate_looks_from_capsule(
-    capsule_df: pd.DataFrame,
-    user_gender: str,
-    templates_by_gender: dict[str, list[tuple[str, ...]]],
-    embedding_model,
-    reference_embeddings: list[dict],
-    top_k: int = 6,
-) -> list[pd.DataFrame]:
-    templates = templates_by_gender.get(user_gender) or []
-    candidates = []
-
-    for template in templates:
-        pools = []
-
-        for group_name in template:
-            pool = capsule_df[capsule_df["category_group"].astype(str).str.lower() == group_name]
-
-            if pool.empty:
-                break
-
-            pools.append(pool.to_dict("records"))
-        else:
-            for combo in itertools.product(*pools):
-                df_combo = pd.DataFrame(combo)
-                df_combo["path"] = df_combo.apply(resolve_image_path, axis=1)
-                df_combo = df_combo[df_combo["path"].apply(lambda p: bool(p) and os.path.exists(p))]
-
-                if not df_combo.empty:
-                    candidates.append(df_combo)
-
-    if not candidates:
-        return []
-
-    scored = []
-
-    if embedding_model is not None and reference_embeddings:
-        for outfit_df in candidates:
-            try:
-                score = embedding_model.score_outfit(outfit_df, reference_embeddings)
-                scored.append((score, outfit_df))
-            except Exception:
-                logging.exception("failed to score outfit")
-    else:
-        scored = [(0.0, outfit_df) for outfit_df in candidates]
-
-    scored.sort(key=lambda x: x[0], reverse=True)
-
-    return select_diverse_looks(scored, capsule_df, top_k=top_k)
-
-
-def select_diverse_looks(
-    scored_outfits: list[tuple[float, pd.DataFrame]],
-    capsule_df: pd.DataFrame,
-    top_k: int = 6,
-) -> list[pd.DataFrame]:
-    capsule_items = set(capsule_df["uuid"].astype(str)) if "uuid" in capsule_df.columns else set()
-    target_looks = max(4, math.ceil(len(capsule_items) / 2)) if capsule_items else top_k
-    target_looks = min(target_looks, top_k)
-
-    selected = []
-    selected_keys = set()
-    covered_items = set()
-
-    for _, outfit_df in scored_outfits:
-        outfit_items = set(outfit_df["uuid"].astype(str)) if "uuid" in outfit_df.columns else set()
-        key = tuple(sorted(outfit_items))
-
-        if key in selected_keys:
-            continue
-
-        if not outfit_items or not outfit_items.issubset(covered_items):
-            selected.append(outfit_df)
-            selected_keys.add(key)
-            covered_items.update(outfit_items)
-
-        if len(selected) >= target_looks and (not capsule_items or covered_items >= capsule_items):
-            break
-
-    if len(selected) < target_looks:
-        for _, outfit_df in scored_outfits:
-            outfit_items = set(outfit_df["uuid"].astype(str)) if "uuid" in outfit_df.columns else set()
-            key = tuple(sorted(outfit_items))
-
-            if key in selected_keys:
-                continue
-
-            selected.append(outfit_df)
-            selected_keys.add(key)
-
-            if len(selected) >= target_looks:
-                break
-
-    return selected
-
-
 def image_paths_for_capsule(capsule_df: pd.DataFrame) -> list[str]:
     paths = []
 
@@ -514,20 +306,6 @@ def resolve_image_path(row) -> str:
             return path
 
     return ""
-
-
-def resolve_reference_image_path(row) -> str:
-    csv_path = str_value(row.get("path"))
-
-    if csv_path:
-        if os.path.isabs(csv_path) and os.path.exists(csv_path):
-            return csv_path
-
-        path = os.path.join(BASE_DIR, csv_path)
-        if os.path.exists(path):
-            return path
-
-    return resolve_image_path(row)
 
 
 def combine_clothes(image_paths: list[str]) -> str:

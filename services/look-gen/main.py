@@ -23,7 +23,8 @@ class LookGenService(look_pb2_grpc.LookGenServiceServicer):
                 f"GenerateLooks request: "
                 f"capsule_items={len(request.capsule.item)}, "
                 f"max_looks={max_looks}, "
-                f"include_images={request.include_images}"
+                f"include_images={request.include_images}",
+                flush=True,
             )
 
             looks = generate_looks(request)
@@ -67,14 +68,14 @@ class LookGenService(look_pb2_grpc.LookGenServiceServicer):
                                 )
                             )
 
-            print(f"GenerateLooks response sent: looks={len(looks)}")
+            print(f"GenerateLooks response sent: looks={len(looks)}", flush=True)
 
         except LookGenError as e:
-            print(f"LookGen error: {e.message}")
+            print(f"LookGen error: {e.message}", flush=True)
             context.abort(e.code, e.message)
 
         except Exception as e:
-            print("!!! Ошибка в GenerateLooks:")
+            print("!!! Ошибка в GenerateLooks:", flush=True)
             traceback.print_exc()
             context.abort(grpc.StatusCode.INTERNAL, str(e))
 
@@ -91,14 +92,15 @@ def serve():
 
     PORT = os.getenv("LOOK_GEN_PORT", "50053")
     server.add_insecure_port(f"[::]:{PORT}")
-    print(f"Look-gen gRPC server starting on port {PORT}...")
+    print(f"Look-gen gRPC server starting on port {PORT}...", flush=True)
 
     server.start()
+    print(f"Look-gen gRPC server started on port {PORT}", flush=True)
 
     try:
         server.wait_for_termination()
     except KeyboardInterrupt:
-        print("Shutting down...")
+        print("Shutting down...", flush=True)
         server.stop(0)
 
 

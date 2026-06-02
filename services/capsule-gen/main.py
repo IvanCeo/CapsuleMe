@@ -172,26 +172,17 @@ def _normalize_ext(ext: str) -> str:
 
 
 def _build_description(row: dict) -> str:
-    parts = []
+    name = (
+        _str_value(row.get("name"))
+        or _str_value(row.get("name_en"))
+        or _str_value(row.get("description"))
+        or _str_value(row.get("category"))
+        or "Товар"
+    )
 
-    name_en = _str_value(row.get("name_en"))
-    name = _str_value(row.get("name"))
     wb_url = _str_value(row.get("wb_url"))
-    description = _str_value(row.get("description"))
 
-    if name_en:
-        parts.append(name_en)
-
-    if name and name != name_en:
-        parts.append(name)
-
-    if description and description not in parts:
-        parts.append(description)
-
-    if wb_url:
-        parts.append(wb_url)
-
-    return " | ".join(parts)
+    return f"{name}|{wb_url}"
 
 
 def serve():

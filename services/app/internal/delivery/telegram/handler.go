@@ -7,8 +7,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"html"
 	"log/slog"
 	"strconv"
+	"strings"
 	"sync"
 
 	bot "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -153,9 +155,13 @@ func (h *JobHandler) handleAnswer(ctx context.Context, job Job) {
 	}
 
 	if job.Data[:4] == "show" {
+		h.bot.Send(bot.NewMessage(job.ChatID, "🧠 собираю подходящие образы..."))
 		l, _ := strconv.Atoi(string(job.Data[5]))
 		var wg sync.WaitGroup
 		var rows [][]bot.InlineKeyboardButton
+
+		lookLinks := make([]string, l)
+
 		for i := 0; i < l; i++ {
 			wg.Add(1)
 			go func(i int, id int64) {
@@ -167,21 +173,51 @@ func (h *JobHandler) handleAnswer(ctx context.Context, job Job) {
 					return
 				}
 				ph := bot.NewPhoto(id, bot.FileBytes{Bytes: look.Image})
-				ph.Caption = "образ " + strconv.Itoa(i)
+				ph.Caption = "образ " + strconv.Itoa(i+1)
 				_, _ = h.bot.Send(ph)
+
+				var b strings.Builder
+				for _, item := range look.Items {
+					name, wbURL := splitDescription(item.Description)
+					if name == "" && wbURL == "" {
+						continue
+					}
+
+					b.WriteString(linkHTML(name, wbURL))
+					b.WriteString("\n")
+				}
+
+				lookLinks[i] = b.String()
 			}(i, job.ChatID)
 			row := []bot.InlineKeyboardButton{
-				bot.NewInlineKeyboardButtonData(fmt.Sprintf("нравится %d", i), fmt.Sprintf("like:%d", i)),
+				bot.NewInlineKeyboardButtonData(fmt.Sprintf("❤️ образ №%d", i+1), fmt.Sprintf("like:%d", i+1)),
 			}
 			rows = append(rows, row)
 		}
 		wg.Wait()
 		// дать клавиатуру что нравится
 		rows = append(rows, []bot.InlineKeyboardButton{
-			bot.NewInlineKeyboardButtonData("нрав все!", "like:100"),
-			bot.NewInlineKeyboardButtonData("не нрав все", "like:-1"),
+			bot.NewInlineKeyboardButtonData("👍 понравились все", "like:100"),
+			bot.NewInlineKeyboardButtonData("👎 не понравилось", "like:-1"),
 		})
-		msg := bot.NewMessage(job.ChatID, "нравится?")
+
+		var text strings.Builder
+		for _, links := range lookLinks {
+			if strings.TrimSpace(links) == "" {
+				continue
+			}
+
+			text.WriteString(links)
+		}
+
+		msgText := strings.TrimSpace(text.String())
+		if msgText != "" {
+			msgText += "\n\n"
+		}
+		msgText += "нравится?"
+
+		msg := bot.NewMessage(job.ChatID, msgText)
+		msg.ParseMode = "HTML"
 		msg.ReplyMarkup = bot.InlineKeyboardMarkup{
 			InlineKeyboard: rows,
 		}
@@ -203,8 +239,8 @@ func (h *JobHandler) handleAnswer(ctx context.Context, job Job) {
 			// положить только его в постгрю
 		}
 		rows := [][]bot.InlineKeyboardButton{{
-			bot.NewInlineKeyboardButtonData("следующая капсула", fmt.Sprintf("next:%v", job.ChatID)),
-			bot.NewInlineKeyboardButtonData("пройти заново", "restart"),
+			bot.NewInlineKeyboardButtonData("➡️ следующая капсула", fmt.Sprintf("next:%v", job.ChatID)),
+			bot.NewInlineKeyboardButtonData("🔁 начать заново", "restart"),
 		}}
 		msg := bot.NewMessage(job.ChatID, "что дальше?")
 		msg.ReplyMarkup = bot.InlineKeyboardMarkup{
@@ -217,7 +253,7 @@ func (h *JobHandler) handleAnswer(ctx context.Context, job Job) {
 	}
 
 	if job.Data[:4] == "next" {
-		h.bot.Send(bot.NewMessage(job.ChatID, "секунду..."))
+		h.bot.Send(bot.NewMessage(job.ChatID, "🧠 ещё капсула..."))
 		go func(ctx context.Context, id int64) {
 			feature, err := h.surveyService.GetIncomingFeatureByID(job.ChatID)
 			if err != nil {
@@ -255,8 +291,6 @@ func (h *JobHandler) handleAnswer(ctx context.Context, job Job) {
 					"update id", job.UpdateID,
 					"err", err,
 				)
-				// _ = h.sendText(job, "Произошла ошибка. Нажми /start")
-				// return
 			}
 
 			err = h.surveyService.SaveLooks(job.ChatID, looks)
@@ -269,12 +303,10 @@ func (h *JobHandler) handleAnswer(ctx context.Context, job Job) {
 					"update id", job.UpdateID,
 					"err", err,
 				)
-				// _ = h.sendText(job, "Произошла ошибка. Нажми /start") // на проде убрать
-				// return                                                // на проде убрать
 			}
 
 			phCFG := bot.NewPhoto(job.ChatID, bot.FileBytes{Bytes: capsule.Image})
-			phCFG.Caption = "твоя капсула!\n"
+			phCFG.Caption = "✨ твоя капсула ✨\n"
 			_, err = h.bot.Send(phCFG)
 
 			var keyboard bot.InlineKeyboardMarkup
@@ -282,16 +314,16 @@ func (h *JobHandler) handleAnswer(ctx context.Context, job Job) {
 			if looks != nil {
 				keyboard = bot.InlineKeyboardMarkup{
 					InlineKeyboard: [][]bot.InlineKeyboardButton{
-						{bot.NewInlineKeyboardButtonData("показать образы", fmt.Sprintf("show:%v:%v", len(looks.Outfits), job.ChatID))},
-						{bot.NewInlineKeyboardButtonData("следующая капсула", fmt.Sprintf("next:%v", job.ChatID))},
-						{bot.NewInlineKeyboardButtonData("начать заново", "/start")},
+						{bot.NewInlineKeyboardButtonData("👗 показать образы", fmt.Sprintf("show:%v:%v", len(looks.Outfits), job.ChatID))},
+						{bot.NewInlineKeyboardButtonData("➡️ следующая капсула", fmt.Sprintf("next:%v", job.ChatID))},
+						{bot.NewInlineKeyboardButtonData("🔁 начать заново", "/start")},
 					},
 				}
 			} else {
 				keyboard = bot.InlineKeyboardMarkup{
 					InlineKeyboard: [][]bot.InlineKeyboardButton{
-						{bot.NewInlineKeyboardButtonData("следующая капсула", fmt.Sprintf("next:%v", job.ChatID))},
-						{bot.NewInlineKeyboardButtonData("начать заново", "/start")},
+						{bot.NewInlineKeyboardButtonData("➡️ следующая капсула", fmt.Sprintf("next:%v", job.ChatID))},
+						{bot.NewInlineKeyboardButtonData("🔁 начать заново", "/start")},
 					},
 				}
 			}
@@ -380,7 +412,7 @@ func (h *JobHandler) handleAnswer(ctx context.Context, job Job) {
 		return
 	}
 
-	h.bot.Send(bot.NewMessage(job.ChatID, "секунду..."))
+	h.bot.Send(bot.NewMessage(job.ChatID, "🧠 собираю капсулу..."))
 
 	session, err := h.surveyService.GetSessionByUser(job.UserID)
 	if err != nil {
@@ -495,16 +527,16 @@ func (h *JobHandler) handleAnswer(ctx context.Context, job Job) {
 	if looks != nil {
 		keyboard = bot.InlineKeyboardMarkup{
 			InlineKeyboard: [][]bot.InlineKeyboardButton{
-				{bot.NewInlineKeyboardButtonData("показать образы", fmt.Sprintf("show:%v:%v", len(looks.Outfits), job.ChatID))},
-				{bot.NewInlineKeyboardButtonData("следующая капсула", fmt.Sprintf("next:%v", job.ChatID))},
-				{bot.NewInlineKeyboardButtonData("начать заново", "/start")},
+				{bot.NewInlineKeyboardButtonData("👗 показать образы", fmt.Sprintf("show:%v:%v", len(looks.Outfits), job.ChatID))},
+				{bot.NewInlineKeyboardButtonData("➡️ следующая капсула", fmt.Sprintf("next:%v", job.ChatID))},
+				{bot.NewInlineKeyboardButtonData("🔁 начать заново", "/start")},
 			},
 		}
 	} else {
 		keyboard = bot.InlineKeyboardMarkup{
 			InlineKeyboard: [][]bot.InlineKeyboardButton{
-				{bot.NewInlineKeyboardButtonData("следующая капсула", fmt.Sprintf("next:%v", job.ChatID))},
-				{bot.NewInlineKeyboardButtonData("начать заново", "/start")},
+				{bot.NewInlineKeyboardButtonData("➡️ следующая капсула", fmt.Sprintf("next:%v", job.ChatID))},
+				{bot.NewInlineKeyboardButtonData("🔁 начать заново", "/start")},
 			},
 		}
 	}
@@ -543,4 +575,26 @@ func (h *JobHandler) sendQuestion(chatID int64, q *survey.Question) error {
 
 	_, err := h.bot.Send(msg)
 	return err
+}
+
+func splitDescription(s string) (string, string) {
+	parts := strings.SplitN(s, "|", 2)
+
+	name := strings.TrimSpace(parts[0])
+
+	if len(parts) < 2 {
+		return name, ""
+	}
+
+	wbURL := strings.TrimSpace(parts[1])
+
+	return name, wbURL
+}
+
+func linkHTML(name, url string) string {
+	return fmt.Sprintf(
+		`<a href="%s">%s</a>`,
+		html.EscapeString(url),
+		html.EscapeString(name),
+	)
 }

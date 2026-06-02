@@ -4,6 +4,7 @@ services:
     build:
       context: ./services/app
       dockerfile: Dockerfile
+      # image: salo1278/capsule-goapp:1.1.0
     container_name: capsule-go
     environment:
       POSTGRES_HOST: postgres
@@ -12,7 +13,7 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: postgres
 
-      TG_TOKEN: .
+      TG_TOKEN: _
 
       CAPSULE_GEN_URL: capsule-gen:50052
       LOOK_GEN_URL: look-gen:50053
@@ -38,18 +39,22 @@ services:
     build:
       context: ./services/capsule-gen
       dockerfile: Dockerfile
+    # image: salo1278/capsule-capsule-gen:1.0.0
     container_name: capsule-gen
     environment:
       CAPSULE_GEN_PORT: "50052"
+      PYTHONUNBUFFERED: "1"
     restart: unless-stopped
 
   look-gen:
     build:
       context: ./services/look-gen
       dockerfile: Dockerfile
+    # image: salo1278/capsule-look-gen:1.0.0
     container_name: look-gen
     environment:
       LOOK_GEN_PORT: "50053"
+      PYTHONUNBUFFERED: "1"
     restart: unless-stopped
 
   postgres:

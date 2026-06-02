@@ -11,12 +11,6 @@ import grpc
 import pandas as pd
 from PIL import Image
 
-try:
-    from model import OutfitEmbeddingModel
-except Exception:
-    OutfitEmbeddingModel = None
-
-
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 OUTFITS_PATH = os.getenv(
@@ -34,7 +28,10 @@ COMBINED_FOLDER = os.getenv(
     os.path.join(BASE_DIR, "combined"),
 )
 
-USE_CLIP = os.getenv("LOOK_GEN_USE_CLIP", "1") == "1"
+# Для Docker/MVP по умолчанию НЕ грузим CLIP/torch/transformers.
+# Включать только явно: LOOK_GEN_USE_CLIP=1.
+USE_CLIP = os.getenv("LOOK_GEN_USE_CLIP", "0") == "1"
+MAX_CANDIDATES = int(os.getenv("LOOK_GEN_MAX_CANDIDATES", "200"))
 
 os.makedirs(COMBINED_FOLDER, exist_ok=True)
 
@@ -105,6 +102,20 @@ def generate_looks(request) -> list[GeneratedLook]:
         use_ml_scoring = options.use_ml_scoring
         require_diverse_items = options.require_diverse_items
 
+    # Даже если Go передал use_ml_scoring=true, в deploy-режиме CLIP выключен
+    # и скоринг будет эвристическим.
+    if not USE_CLIP:
+        use_ml_scoring = False
+
+    logging.info(
+        "generate looks: capsule_items=%s max_looks=%s min_items=%s max_items=%s use_clip=%s",
+        len(capsule_items),
+        max_looks,
+        min_items,
+        max_items,
+        USE_CLIP,
+    )
+
     user_gender = detect_capsule_gender(capsule_items)
 
     templates = get_templates_for_gender(user_gender)
@@ -128,6 +139,12 @@ def generate_looks(request) -> list[GeneratedLook]:
             "no looks generated from capsule",
         )
 
+    if len(candidates) > MAX_CANDIDATES:
+        random.shuffle(candidates)
+        candidates = candidates[:MAX_CANDIDATES]
+
+    logging.info("look candidates built: %s", len(candidates))
+
     scored = []
 
     for look in candidates:
@@ -144,9 +161,12 @@ def generate_looks(request) -> list[GeneratedLook]:
     scored.sort(key=lambda x: x.score, reverse=True)
 
     if require_diverse_items:
-        return select_diverse_looks(scored, max_looks=max_looks)
+        selected = select_diverse_looks(scored, max_looks=max_looks)
+    else:
+        selected = scored[:max_looks]
 
-    return scored[:max_looks]
+    logging.info("looks generated: %s", len(selected))
+    return selected
 
 
 def capsule_to_items(capsule) -> list[LookGenItem]:
@@ -243,6 +263,9 @@ def build_candidates_from_templates(
                     )
                 )
 
+                if len(result) >= MAX_CANDIDATES:
+                    return deduplicate_looks(result)
+
     return deduplicate_looks(result)
 
 
@@ -307,6 +330,9 @@ def build_fallback_candidates(
                     )
                 )
 
+                if len(result) >= MAX_CANDIDATES:
+                    return deduplicate_looks(result)
+
     if result:
         return deduplicate_looks(result)
 
@@ -332,6 +358,9 @@ def build_fallback_candidates(
                 )
             )
 
+            if len(result) >= MAX_CANDIDATES:
+                return deduplicate_looks(result)
+
     return deduplicate_looks(result)
 
 
@@ -340,9 +369,6 @@ def score_look(look: GeneratedLook, use_ml_scoring: bool) -> float:
         return heuristic_score(look)
 
     if not USE_CLIP:
-        return heuristic_score(look)
-
-    if OutfitEmbeddingModel is None:
         return heuristic_score(look)
 
     if not all(item.path and os.path.exists(item.path) for item in look.items):
@@ -575,12 +601,22 @@ def filter_templates(counter: Counter, min_count: int) -> list[tuple[str, ...]]:
 def get_embedding_model():
     global _embedding_model
 
+    if not USE_CLIP:
+        return None
+
     if _embedding_model is not None:
         return _embedding_model
 
-    _embedding_model = OutfitEmbeddingModel()
+    try:
+        # Ленивый импорт: torch/transformers не грузятся на старте сервера.
+        from model import OutfitEmbeddingModel
 
-    return _embedding_model
+        _embedding_model = OutfitEmbeddingModel()
+        return _embedding_model
+    except Exception:
+        logging.exception("failed to initialize CLIP model, fallback to heuristic scoring")
+        _embedding_model = None
+        return None
 
 
 def get_reference_embeddings() -> list[dict]:
@@ -589,15 +625,15 @@ def get_reference_embeddings() -> list[dict]:
     if _reference_embeddings is not None:
         return _reference_embeddings
 
-    if DF_OUTFITS.empty:
-        _reference_embeddings = []
-        return _reference_embeddings
-
-    if OutfitEmbeddingModel is None:
+    if not USE_CLIP or DF_OUTFITS.empty:
         _reference_embeddings = []
         return _reference_embeddings
 
     model = get_embedding_model()
+
+    if model is None:
+        _reference_embeddings = []
+        return _reference_embeddings
 
     refs = []
 
@@ -696,52 +732,30 @@ def deduplicate_looks(looks: list[GeneratedLook]) -> list[GeneratedLook]:
 
 
 def gender_to_str(value: int) -> str:
-    name = enum_name(value)
-
-    if "FEMALE" in name:
-        return "female"
-
-    if "MALE" in name:
-        return "male"
-
-    return ""
+    mapping = {
+        1: "male",
+        2: "female",
+    }
+    return mapping.get(int(value), "")
 
 
 def style_to_str(value: int) -> str:
-    name = enum_name(value)
-
-    if "CASUAL" in name:
-        return "casual"
-
-    if "CLASSIC" in name:
-        return "classic"
-
-    if "SPORT" in name:
-        return "sport"
-
-    return ""
+    mapping = {
+        1: "casual",
+        2: "classic",
+        3: "sport",
+    }
+    return mapping.get(int(value), "")
 
 
 def season_to_str(value: int) -> str:
-    name = enum_name(value)
-
-    if "WINTER" in name:
-        return "winter"
-
-    if "SPRING" in name:
-        return "spring"
-
-    if "SUMMER" in name:
-        return "summer"
-
-    if "AUTUMN" in name:
-        return "autumn"
-
-    return ""
-
-
-def enum_name(value: int) -> str:
-    return str(value).upper()
+    mapping = {
+        1: "winter",
+        2: "autumn",
+        3: "spring",
+        4: "summer",
+    }
+    return mapping.get(int(value), "")
 
 
 def normalize_ext(ext: str) -> str:
