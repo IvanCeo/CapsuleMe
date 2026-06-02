@@ -87,7 +87,10 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	client, err := grpc.NewGrpcCatalogClient(5, log2, "localhost:50052", "localhost:50053")
+	CAPSULE_GEN_URL := os.Getenv("CAPSULE_GEN_URL")
+	LOOK_GEN_URL := os.Getenv("LOOK_GEN_URL")
+
+	client, err := grpc.NewGrpcCatalogClient(5, log2, CAPSULE_GEN_URL, LOOK_GEN_URL)
 	// localhost:50052 capsuleService
 	// localhost:50053 lookService
 	if err != nil {

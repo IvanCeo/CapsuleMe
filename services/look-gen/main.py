@@ -80,7 +80,6 @@ class LookGenService(look_pb2_grpc.LookGenServiceServicer):
 
 
 def serve():
-    port = os.getenv("LOOK_GEN_PORT", "50053")
 
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
 
@@ -89,9 +88,10 @@ def serve():
         server,
     )
 
-    server.add_insecure_port(f"[::]:{port}")
 
-    print(f"LookGen gRPC server starting on port {port}...")
+    PORT = os.getenv("LOOK_GEN_PORT", "50053")
+    server.add_insecure_port(f"[::]:{PORT}")
+    print(f"Look-gen gRPC server starting on port {PORT}...")
 
     server.start()
 

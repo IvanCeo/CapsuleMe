@@ -32,11 +32,11 @@ func NewBot(catalogClient *grpc.GrpcCatalogClient) (*Bot, error) {
 	}
 	log := logger.New()
 
-	REDIS_ADDR := os.Getenv("REDIS_ADDR")
-	REDIS_PASS := os.Getenv("REDIS_PASS")
-	if REDIS_ADDR == "" || REDIS_PASS == "" {
-		return nil, errors.New("no redis env")
-	}
+	// REDIS_ADDR := os.Getenv("REDIS_ADDR")
+	// REDIS_PASS := os.Getenv("REDIS_PASS")
+	// if REDIS_ADDR == "" || REDIS_PASS == "" {
+	// 	return nil, errors.New("no redis env")
+	// }
 	// cache, err := redis.NewRedis(REDIS_ADDR, REDIS_PASS)
 	// if err != nil {
 	// 	return nil, err
@@ -56,9 +56,9 @@ func NewBot(catalogClient *grpc.GrpcCatalogClient) (*Bot, error) {
 		return nil, err
 	}
 
-	if REDIS_ADDR == "" || REDIS_PASS == "" {
-		return nil, errors.New("no migrate")
-	}
+	// if REDIS_ADDR == "" || REDIS_PASS == "" {
+	// 	return nil, errors.New("no migrate")
+	// }
 
 	sessionRepo := mocks.NewSessionRepoMock()
 

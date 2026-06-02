@@ -202,8 +202,9 @@ def serve():
         server,
     )
 
-    server.add_insecure_port("[::]:50052")
-    print("Python gRPC server starting on port 50052...")
+    PORT = os.getenv('CAPSULE_GEN_PORT', "50052")
+    server.add_insecure_port(f"[::]:{PORT}")
+    print(f'Capsule-gen gRPC server starting on port {PORT}...')
     server.start()
 
     try:

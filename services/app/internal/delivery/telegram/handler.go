@@ -152,25 +152,6 @@ func (h *JobHandler) handleAnswer(ctx context.Context, job Job) {
 		return
 	}
 
-	// обратная связь будет рабоать иначе
-	// тут хендлить ответы обратной связи
-	// if job.Data[:1] == "0" || job.Data[:1] == "1" {
-	// 	go func(job Job) {
-	// 		key := job.Data[2:]
-	// 		cpsl, err := h.surveyService.GetFromCache(ctx, key) // достатется по jobID из редиса
-	// 		if err != nil {
-	// 			h.log.Error("failed to get from cache", "err", err, "key from job", key, "job", job)
-	// 			return
-	// 		}
-	// 		score := job.Data[:1]
-	// 		err = h.surveyService.SaveFeedback(ctx, score, cpsl)
-	// 		if err != nil {
-	// 			h.log.Error("failed to save feedback", "err", err)
-	// 			return
-	// 		}
-	// 	}(job)
-	// }
-
 	if job.Data[:4] == "show" {
 		l, _ := strconv.Atoi(string(job.Data[5]))
 		var wg sync.WaitGroup
@@ -181,7 +162,8 @@ func (h *JobHandler) handleAnswer(ctx context.Context, job Job) {
 				defer wg.Done()
 				look, err := h.surveyService.GetLookByNumAndID(job.ChatID, i)
 				if err != nil {
-					// логгировать ошибку
+					h.log.Error("getlookbynum failed", "err", err)
+					_ = h.sendText(job, "Покка не смог собрать образы :(\nПопробуй еще раз! -> /start")
 					return
 				}
 				ph := bot.NewPhoto(id, bot.FileBytes{Bytes: look.Image})
@@ -273,8 +255,8 @@ func (h *JobHandler) handleAnswer(ctx context.Context, job Job) {
 					"update id", job.UpdateID,
 					"err", err,
 				)
-				_ = h.sendText(job, "Произошла ошибка. Нажми /start")
-				return
+				// _ = h.sendText(job, "Произошла ошибка. Нажми /start")
+				// return
 			}
 
 			err = h.surveyService.SaveLooks(job.ChatID, looks)
@@ -287,20 +269,31 @@ func (h *JobHandler) handleAnswer(ctx context.Context, job Job) {
 					"update id", job.UpdateID,
 					"err", err,
 				)
-				_ = h.sendText(job, "Произошла ошибка. Нажми /start") // на проде убрать
-				return                                                // на проде убрать
+				// _ = h.sendText(job, "Произошла ошибка. Нажми /start") // на проде убрать
+				// return                                                // на проде убрать
 			}
 
 			phCFG := bot.NewPhoto(job.ChatID, bot.FileBytes{Bytes: capsule.Image})
 			phCFG.Caption = "твоя капсула!\n"
 			_, err = h.bot.Send(phCFG)
 
-			keyboard := bot.InlineKeyboardMarkup{
-				InlineKeyboard: [][]bot.InlineKeyboardButton{
-					{bot.NewInlineKeyboardButtonData("показать образы", fmt.Sprintf("show:%v:%v", len(looks.Outfits), job.ChatID))},
-					{bot.NewInlineKeyboardButtonData("следующая капсула", fmt.Sprintf("next:%v", job.ChatID))},
-					{bot.NewInlineKeyboardButtonData("начать заново", "restart")},
-				},
+			var keyboard bot.InlineKeyboardMarkup
+
+			if looks != nil {
+				keyboard = bot.InlineKeyboardMarkup{
+					InlineKeyboard: [][]bot.InlineKeyboardButton{
+						{bot.NewInlineKeyboardButtonData("показать образы", fmt.Sprintf("show:%v:%v", len(looks.Outfits), job.ChatID))},
+						{bot.NewInlineKeyboardButtonData("следующая капсула", fmt.Sprintf("next:%v", job.ChatID))},
+						{bot.NewInlineKeyboardButtonData("начать заново", "/start")},
+					},
+				}
+			} else {
+				keyboard = bot.InlineKeyboardMarkup{
+					InlineKeyboard: [][]bot.InlineKeyboardButton{
+						{bot.NewInlineKeyboardButtonData("следующая капсула", fmt.Sprintf("next:%v", job.ChatID))},
+						{bot.NewInlineKeyboardButtonData("начать заново", "/start")},
+					},
+				}
 			}
 
 			msg := bot.NewMessage(job.ChatID, "Что дальше?")
@@ -473,8 +466,8 @@ func (h *JobHandler) handleAnswer(ctx context.Context, job Job) {
 			"update id", job.UpdateID,
 			"err", err,
 		)
-		_ = h.sendText(job, "Произошла ошибка. Нажми /start")
-		return
+		// _ = h.sendText(job, "Произошла ошибка. Нажми /start")
+		// return
 	}
 
 	// сохранить лук
@@ -488,8 +481,8 @@ func (h *JobHandler) handleAnswer(ctx context.Context, job Job) {
 			"update id", job.UpdateID,
 			"err", err,
 		)
-		_ = h.sendText(job, "Произошла ошибка. Нажми /start") // на проде убрать
-		return                                                // на проде убрать
+		// _ = h.sendText(job, "Произошла ошибка. Нажми /start") // на проде убрать
+		// return                                                // на проде убрать
 	}
 
 	// отпправить капсулу
@@ -497,12 +490,23 @@ func (h *JobHandler) handleAnswer(ctx context.Context, job Job) {
 	phCFG.Caption = "твоя капсула!\n"
 	_, err = h.bot.Send(phCFG)
 
-	keyboard := bot.InlineKeyboardMarkup{
-		InlineKeyboard: [][]bot.InlineKeyboardButton{
-			{bot.NewInlineKeyboardButtonData("показать образы", fmt.Sprintf("show:%v:%v", len(looks.Outfits), job.ChatID))},
-			{bot.NewInlineKeyboardButtonData("следующая капсула", fmt.Sprintf("next:%v", job.ChatID))},
-			{bot.NewInlineKeyboardButtonData("начать заново", "/start")},
-		},
+	var keyboard bot.InlineKeyboardMarkup
+
+	if looks != nil {
+		keyboard = bot.InlineKeyboardMarkup{
+			InlineKeyboard: [][]bot.InlineKeyboardButton{
+				{bot.NewInlineKeyboardButtonData("показать образы", fmt.Sprintf("show:%v:%v", len(looks.Outfits), job.ChatID))},
+				{bot.NewInlineKeyboardButtonData("следующая капсула", fmt.Sprintf("next:%v", job.ChatID))},
+				{bot.NewInlineKeyboardButtonData("начать заново", "/start")},
+			},
+		}
+	} else {
+		keyboard = bot.InlineKeyboardMarkup{
+			InlineKeyboard: [][]bot.InlineKeyboardButton{
+				{bot.NewInlineKeyboardButtonData("следующая капсула", fmt.Sprintf("next:%v", job.ChatID))},
+				{bot.NewInlineKeyboardButtonData("начать заново", "/start")},
+			},
+		}
 	}
 
 	msg := bot.NewMessage(job.ChatID, "Что дальше?")

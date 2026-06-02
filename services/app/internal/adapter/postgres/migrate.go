@@ -41,7 +41,7 @@ func (p *Postgres) Up(ctx context.Context, cfg Config) error {
 
 	goose.SetDialect("postgres")
 	if err := goose.UpContext(ctx, db, dirAbs); err != nil {
-		return fmt.Errorf("goose down: %w", err)
+		return fmt.Errorf("goose up: %w", err)
 	}
 	return nil
 }

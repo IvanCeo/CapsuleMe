@@ -1,0 +1,64 @@
+services:
+
+  goapp:
+    build:
+      context: ./services/app
+      dockerfile: Dockerfile
+    container_name: capsule-go
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+
+      TG_TOKEN: .
+
+      CAPSULE_GEN_URL: capsule-gen:50052
+      LOOK_GEN_URL: look-gen:50053
+
+      HTTP_PROXY: http://host.docker.internal:10808
+      HTTPS_PROXY: http://host.docker.internal:10808
+      http_proxy: http://host.docker.internal:10808
+      https_proxy: http://host.docker.internal:10808
+
+      NO_PROXY: localhost,127.0.0.1,postgres,capsule-gen,look-gen
+      no_proxy: localhost,127.0.0.1,postgres,capsule-gen,look-gen
+
+    depends_on:
+      capsule-gen:
+        condition: service_started
+      look-gen:
+        condition: service_started
+      postgres:
+        condition: service_started
+    restart: unless-stopped
+
+  capsule-gen:
+    build:
+      context: ./services/capsule-gen
+      dockerfile: Dockerfile
+    container_name: capsule-gen
+    environment:
+      CAPSULE_GEN_PORT: "50052"
+    restart: unless-stopped
+
+  look-gen:
+    build:
+      context: ./services/look-gen
+      dockerfile: Dockerfile
+    container_name: look-gen
+    environment:
+      LOOK_GEN_PORT: "50053"
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:16
+    container_name: postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_PASSWORD: postgres
+
+volumes:
+  postgres_data:
